@@ -1,12 +1,14 @@
 'use client'
 
+export const dynamic = "force-dynamic"
+
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Breadcrumb from '@/components/Breadcrumb'
 import ArticleCard from '@/components/ArticleCard'
 import AdSense from '@/components/AdSense'
 import Link from 'next/link'
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Suspense } from 'react'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { HiSearch, HiHeart, HiDocumentText, HiCake, HiCamera, HiSparkles, HiShoppingBag, HiTrendingUp, HiGlobeAlt, HiPencil, HiCollection, HiChevronLeft, HiChevronRight } from 'react-icons/hi'
 import { categoryIdToSlug, categoryNames, categorySlugToId } from '@/lib/categories'
@@ -115,7 +117,7 @@ interface Article {
   read_time: string
 }
 
-export default function BlogPage() {
+function BlogPageContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -530,6 +532,24 @@ export default function BlogPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">Chargement...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    }>
+      <BlogPageContent />
+    </Suspense>
   )
 }
 

@@ -17,8 +17,52 @@ export default function RegionPage({ params }: PageProps) {
     notFound()
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
+  const pageUrl = `${baseUrl}/annuaire/${params.region}`
+
+  // Données structurées JSON-LD pour la page de région
+  const regionStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `Prestataires de mariage en ${regionData.name}`,
+    description: `Annuaire complet des prestataires de mariage dans la région ${regionData.name}.`,
+    url: pageUrl,
+    mainEntity: {
+      '@type': 'ItemList',
+      name: `Prestataires de mariage en ${regionData.name}`,
+      description: `Liste des départements avec prestataires de mariage dans la région ${regionData.name}`,
+    },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Accueil',
+          item: baseUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Annuaire',
+          item: `${baseUrl}/annuaire`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: regionData.name,
+          item: pageUrl,
+        },
+      ],
+    },
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(regionStructuredData) }}
+      />
       <Header />
       
       <main className="flex-grow">
@@ -53,19 +97,63 @@ export default function RegionPage({ params }: PageProps) {
   )
 }
 
-// Génération des métadonnées pour chaque région
+// Génération des métadonnées SEO pour chaque région
 export async function generateMetadata({ params }: PageProps) {
   const regionData = getRegionBySlug(params.region)
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
 
   if (!regionData) {
     return {
-      title: 'Région non trouvée',
+      title: 'Région non trouvée - Mariage Parfait',
     }
   }
 
+  const pageUrl = `${baseUrl}/annuaire/${params.region}`
+  const title = `Prestataires de mariage en ${regionData.name} - Mariage Parfait`
+  const description = `Trouvez les meilleurs prestataires de mariage dans la région ${regionData.name}. Photographes, traiteurs, salles de réception, fleuristes, DJ et plus encore. Annuaire complet par département.`
+  const imageUrl = `${baseUrl}/images/general/accueil-mariage-parfait.webp`
+
   return {
-    title: `Prestataires de mariage en ${regionData.name} - Mariage Parfait`,
-    description: `Trouvez les meilleurs prestataires de mariage dans la région ${regionData.name}. Photographes, traiteurs, salles de réception et plus encore.`,
+    title,
+    description,
+    keywords: `prestataires mariage ${regionData.name}, mariage ${regionData.name}, photographe mariage, traiteur mariage, salle réception, organisation mariage`,
+    authors: [{ name: 'Mariage Parfait' }],
+    openGraph: {
+      title,
+      description,
+      url: pageUrl,
+      siteName: 'Mariage Parfait',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `Prestataires de mariage en ${regionData.name}`,
+        },
+      ],
+      locale: 'fr_FR',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
+    },
+    alternates: {
+      canonical: pageUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
   }
 }
 

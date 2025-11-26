@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { categorySlugToId, categoryIdToSlug } from '@/lib/categories'
 
+export const dynamic = "force-dynamic"
+
 // Route de débogage pour vérifier les articles et catégories
 export async function GET(request: Request) {
   try {

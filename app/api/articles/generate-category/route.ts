@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { generateEnrichedArticle } from '@/lib/enriched-article-generator'
 import { categorySlugToId } from '@/lib/categories'
 
+export const dynamic = "force-dynamic"
+
 // Route pour générer un article pour une catégorie spécifique
 export async function POST(request: NextRequest) {
   try {

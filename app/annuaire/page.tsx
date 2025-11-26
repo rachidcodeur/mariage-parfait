@@ -3,10 +3,91 @@ import Footer from '@/components/Footer'
 import Link from 'next/link'
 import { HiArrowRight, HiCheck } from 'react-icons/hi'
 import { regions, regionToSlug } from '@/lib/regions'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Annuaire des Prestataires de Mariage en France - Mariage Parfait',
+  description: 'Trouvez rapidement les meilleurs prestataires de mariage partout en France. Photographes, traiteurs, salles de réception, fleuristes, DJ... Explorez notre annuaire par région et département.',
+  keywords: 'annuaire prestataires mariage, prestataires mariage France, photographe mariage, traiteur mariage, salle réception mariage, fleuriste mariage, DJ mariage, organisation mariage',
+  authors: [{ name: 'Mariage Parfait' }],
+  openGraph: {
+    title: 'Annuaire des Prestataires de Mariage en France - Mariage Parfait',
+    description: 'Trouvez rapidement les meilleurs prestataires de mariage partout en France. Photographes, traiteurs, salles de réception, fleuristes, DJ...',
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/annuaire`,
+    siteName: 'Mariage Parfait',
+    images: [
+      {
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/images/general/accueil-mariage-parfait.webp`,
+        width: 1200,
+        height: 630,
+        alt: 'Annuaire des prestataires de mariage',
+      },
+    ],
+    locale: 'fr_FR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Annuaire des Prestataires de Mariage en France - Mariage Parfait',
+    description: 'Trouvez rapidement les meilleurs prestataires de mariage partout en France.',
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/images/general/accueil-mariage-parfait.webp`],
+  },
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/annuaire`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
 
 export default function AnnuairePage() {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
+
+  // Données structurées JSON-LD pour la page annuaire
+  const annuaireStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Annuaire des Prestataires de Mariage en France',
+    description: 'Trouvez rapidement les meilleurs prestataires de mariage partout en France. Photographes, traiteurs, salles de réception, fleuristes, DJ...',
+    url: `${baseUrl}/annuaire`,
+    mainEntity: {
+      '@type': 'ItemList',
+      name: 'Prestataires de mariage en France',
+      description: 'Liste des régions avec prestataires de mariage en France',
+    },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Accueil',
+          item: baseUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Annuaire',
+          item: `${baseUrl}/annuaire`,
+        },
+      ],
+    },
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(annuaireStructuredData) }}
+      />
       <Header />
       
       <main className="flex-grow">

@@ -41,8 +41,58 @@ export default async function DepartmentPage({ params }: PageProps) {
   // Récupérer 6 prestataires premium au hasard
   const premiumProviders = await getPremiumProviders(params.department, 6)
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
+  const pageUrl = `${baseUrl}/annuaire/${params.region}/${params.department}`
+
+  // Données structurées JSON-LD pour la page de département
+  const departmentStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `Prestataires de mariage en ${department.name} (${department.code})`,
+    description: `Annuaire complet des prestataires de mariage dans le département ${department.name} (${department.code}) en ${regionData.name}.`,
+    url: pageUrl,
+    mainEntity: {
+      '@type': 'ItemList',
+      name: `Prestataires de mariage en ${department.name}`,
+      description: `Liste des prestataires de mariage disponibles dans le département ${department.name}`,
+    },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Accueil',
+          item: baseUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Annuaire',
+          item: `${baseUrl}/annuaire`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: regionData.name,
+          item: `${baseUrl}/annuaire/${params.region}`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 4,
+          name: department.name,
+          item: pageUrl,
+        },
+      ],
+    },
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(departmentStructuredData) }}
+      />
       <Header />
 
       <main className="flex-grow">
@@ -130,13 +180,14 @@ export default async function DepartmentPage({ params }: PageProps) {
   )
 }
 
-// Génération des métadonnées
+// Génération des métadonnées SEO
 export async function generateMetadata({ params }: PageProps) {
   const regionData = getRegionBySlug(params.region)
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
 
   if (!regionData) {
     return {
-      title: 'Département non trouvé',
+      title: 'Département non trouvé - Mariage Parfait',
     }
   }
 
@@ -144,13 +195,56 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!department) {
     return {
-      title: 'Département non trouvé',
+      title: 'Département non trouvé - Mariage Parfait',
     }
   }
 
+  const pageUrl = `${baseUrl}/annuaire/${params.region}/${params.department}`
+  const title = `Prestataires de mariage en ${department.name} (${department.code}) - Mariage Parfait`
+  const description = `Trouvez tous les prestataires de mariage dans le département ${department.name} (${department.code}) en ${regionData.name}. Photographes, traiteurs, salles de réception, fleuristes, DJ et plus encore. Annuaire complet et gratuit.`
+  const imageUrl = `${baseUrl}/images/general/accueil-mariage-parfait.webp`
+
   return {
-    title: `Prestataires de mariage en ${department.name} (${department.code}) - Mariage Parfait`,
-    description: `Trouvez tous les prestataires de mariage dans le département ${department.name}. Photographes, traiteurs, salles de réception et plus encore.`,
+    title,
+    description,
+    keywords: `prestataires mariage ${department.name}, mariage ${department.code}, ${regionData.name}, photographe mariage, traiteur mariage, salle réception, organisation mariage`,
+    authors: [{ name: 'Mariage Parfait' }],
+    openGraph: {
+      title,
+      description,
+      url: pageUrl,
+      siteName: 'Mariage Parfait',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `Prestataires de mariage en ${department.name}`,
+        },
+      ],
+      locale: 'fr_FR',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
+    },
+    alternates: {
+      canonical: pageUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
   }
 }
 
