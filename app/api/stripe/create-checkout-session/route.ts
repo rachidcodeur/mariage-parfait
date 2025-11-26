@@ -1,0 +1,105 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { stripe, STRIPE_PRICE_ID } from '@/lib/stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+
+export async function POST(request: NextRequest) {
+  try {
+    const { userId } = await request.json()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'ID utilisateur manquant' },
+        { status: 400 }
+      )
+    }
+
+    if (!STRIPE_PRICE_ID) {
+      return NextResponse.json(
+        { error: 'Configuration Stripe manquante (STRIPE_PRICE_ID)' },
+        { status: 500 }
+      )
+    }
+
+    // Créer un client admin Supabase
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+
+    // Récupérer ou créer le customer Stripe
+    let customerId: string
+
+    // Vérifier si l'utilisateur a déjà un customer_id
+    const { data: existingSubscription, error: subError } = await supabaseAdmin
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', userId)
+      .single()
+
+    if (subError || !existingSubscription?.stripe_customer_id) {
+      // Récupérer l'email de l'utilisateur
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
+      
+      if (userError || !user) {
+        return NextResponse.json(
+          { error: 'Utilisateur non trouvé' },
+          { status: 404 }
+        )
+      }
+
+      // Créer un nouveau customer Stripe
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {
+          userId: userId,
+        },
+      })
+
+      customerId = customer.id
+
+      // Sauvegarder le customer_id dans la base de données
+      await supabaseAdmin
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          stripe_customer_id: customerId,
+        }, {
+          onConflict: 'user_id',
+        })
+    } else {
+      customerId = existingSubscription.stripe_customer_id
+    }
+
+    // Créer la session de checkout
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: STRIPE_PRICE_ID,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${request.headers.get('origin') || 'http://localhost:3000'}/dashboard/abonnement?success=true`,
+      cancel_url: `${request.headers.get('origin') || 'http://localhost:3000'}/dashboard/abonnement?canceled=true`,
+      metadata: {
+        userId: userId,
+      },
+    })
+
+    return NextResponse.json({ sessionId: session.id, url: session.url })
+  } catch (error: any) {
+    console.error('Error creating checkout session:', error)
+    return NextResponse.json(
+      { error: 'Erreur lors de la création de la session de paiement: ' + error.message },
+      { status: 500 }
+    )
+  }
+}
+

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/articles/generate-frequent",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}
