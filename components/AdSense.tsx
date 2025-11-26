@@ -41,17 +41,40 @@ export default function AdSense({
         // Charger le script AdSense (une seule fois)
         await loadAdSenseScript(clientId)
 
+        // Attendre un peu pour que le script soit complètement chargé
+        await new Promise(resolve => setTimeout(resolve, 100))
+
         // Initialiser cette annonce spécifique
         if (adRef.current && (window as any).adsbygoogle && !isAdInitialized.current) {
-          ;(window as any).adsbygoogle.push({})
-          isAdInitialized.current = true
+          try {
+            ;(window as any).adsbygoogle.push({})
+            isAdInitialized.current = true
+          } catch (pushError) {
+            console.error('AdSense push error:', pushError)
+            // Réessayer après un court délai
+            setTimeout(() => {
+              if (adRef.current && (window as any).adsbygoogle && !isAdInitialized.current) {
+                try {
+                  ;(window as any).adsbygoogle.push({})
+                  isAdInitialized.current = true
+                } catch (retryError) {
+                  console.error('AdSense retry push error:', retryError)
+                }
+              }
+            }, 500)
+          }
         }
       } catch (err) {
         console.error('AdSense initialization error:', err)
       }
     }
 
-    initializeAd()
+    // Délai pour s'assurer que le DOM est prêt
+    const timer = setTimeout(() => {
+      initializeAd()
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [clientId, adSlot])
 
   return (

@@ -8,6 +8,8 @@ import AdSense from '@/components/AdSense'
 import FadeInUp from '@/components/FadeInUp'
 import AnimatedImage from '@/components/AnimatedImage'
 import AnimatedCounter from '@/components/AnimatedCounter'
+import { getArticles } from '@/lib/supabase'
+import { categoryIdToSlug, categoryNames } from '@/lib/categories'
 import { 
   HiPencil, 
   HiCollection, 
@@ -42,37 +44,49 @@ const categories = [
   { icon: HiGlobeAlt, title: 'Voyage de Noces', description: 'Organiser votre lune de miel', count: 24, href: '/blog?category=voyage-noces' },
 ]
 
-const articles = [
-  {
-    icon: HiTrendingUp,
-    category: 'Tendances',
-    title: 'Les mariages éco-responsables: Comment organiser un mariage éco-friendly et respectueux de l\'environnement',
-    description: 'Découvrez comment organiser un mariage respectueux de l\'environnement avec nos conseils pratiques et nos idées éco-responsables.',
-    date: '1 novembre 2020',
-    readTime: '3 min',
-    href: '/blog/mariages-eco-responsables'
-  },
-  {
-    icon: HiDocumentText,
-    category: 'Papeterie & Détails',
-    title: 'Illuminez votre mariage avec des détails en papier doré : tendances et inspirations',
-    description: 'Le papier doré apporte une touche d\'élégance et de sophistication à votre mariage. Découvrez nos idées et inspirations.',
-    date: '15 octobre 2020',
-    readTime: '5 min',
-    href: '/blog/papier-dore-mariage'
-  },
-  {
-    icon: HiCake,
-    category: 'Gastronomie',
-    title: 'Les tendances culinaires incontournables pour un mariage en 2021',
-    description: 'Explorez les dernières tendances culinaires pour créer un menu de mariage mémorable et surprenant.',
-    date: '10 octobre 2020',
-    readTime: '4 min',
-    href: '/blog/tendances-culinaires-2021'
-  },
-]
+const categoryIconsMap: Record<string, any> = {
+  beaute: HiPencil,
+  budget: HiCollection,
+  'ceremonie-reception': HiHeart,
+  decoration: HiSparkles,
+  gastronomie: HiCake,
+  inspiration: HiLightBulb,
+  'papeterie-details': HiDocumentText,
+  'photo-video': HiCamera,
+  prestataires: HiUserGroup,
+  'robes-mariee': HiShoppingBag,
+  tendances: HiTrendingUp,
+  'voyage-noces': HiGlobeAlt,
+}
 
-export default function Home() {
+export default async function Home() {
+  // Récupérer les 3 derniers articles depuis la base de données
+  const latestArticles = await getArticles('all', 3, 0)
+
+  // Formater les articles pour l'affichage
+  const articles = latestArticles.map((article) => {
+    const categorySlug = categoryIdToSlug[article.category_id] || 'inspiration'
+    const categoryName = categoryNames[categorySlug] || 'Article'
+    const Icon = categoryIconsMap[categorySlug] || HiDocumentText
+
+    // Formater la date
+    const date = new Date(article.created_at)
+    const formattedDate = date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+
+    return {
+      icon: Icon,
+      category: categoryName,
+      title: article.title,
+      description: article.excerpt,
+      date: formattedDate,
+      readTime: article.read_time,
+      href: `/blog/${article.slug}`,
+    }
+  })
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -285,21 +299,29 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
               {/* Articles */}
               <div className="lg:col-span-2 space-y-6 w-full min-w-0 overflow-hidden">
-                {articles.map((article, index) => (
-                  <FadeInUp key={article.title} delay={index * 0.1}>
-                    <div className="w-full min-w-0">
-                      <ArticleCard
-                        icon={article.icon}
-                        category={article.category}
-                        title={article.title}
-                        description={article.description}
-                        date={article.date}
-                        readTime={article.readTime}
-                        href={article.href}
-                      />
+                {articles.length > 0 ? (
+                  articles.map((article, index) => (
+                    <FadeInUp key={article.href} delay={index * 0.1}>
+                      <div className="w-full min-w-0">
+                        <ArticleCard
+                          icon={article.icon}
+                          category={article.category}
+                          title={article.title}
+                          description={article.description}
+                          date={article.date}
+                          readTime={article.readTime}
+                          href={article.href}
+                        />
+                      </div>
+                    </FadeInUp>
+                  ))
+                ) : (
+                  <FadeInUp>
+                    <div className="text-center py-8">
+                      <p className="text-gray-600">Aucun article disponible pour le moment.</p>
                     </div>
                   </FadeInUp>
-                ))}
+                )}
                 <FadeInUp delay={0.3}>
                   <div className="text-center pt-4">
                     <a
@@ -316,7 +338,7 @@ export default function Home() {
               {/* Sidebar: AdSense + Newsletter */}
               <div className="space-y-6 w-full min-w-0 overflow-hidden">
                 {/* AdSense */}
-                <div className="bg-white p-4 rounded-lg shadow-md min-h-[250px] flex items-center justify-center w-full max-w-full overflow-hidden">
+                <div className="bg-white p-4 rounded-lg shadow-md min-h-[250px] w-full max-w-full overflow-hidden">
                   <AdSense adSlot="4063903167" />
                 </div>
 

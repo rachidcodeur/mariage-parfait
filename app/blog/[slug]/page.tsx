@@ -4,6 +4,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 import AdSense from '@/components/AdSense'
 import ArticleCard from '@/components/ArticleCard'
 import TableOfContents from '@/components/TableOfContents'
+import ArticleContentWithAds from '@/components/ArticleContentWithAds'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getArticleBySlug, getArticles } from '@/lib/supabase'
@@ -100,6 +101,7 @@ export default async function ArticlePage({ params }: PageProps) {
     return processedHtml
   }
 
+
   const tableOfContents = extractTableOfContents(article.content)
   const contentWithIds = addIdsToHeadings(article.content)
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
@@ -183,14 +185,11 @@ export default async function ArticlePage({ params }: PageProps) {
                   </div>
                 </div>
 
-                {/* Article Content */}
-                <div 
-                  className="prose prose-lg max-w-none mb-8"
-                  dangerouslySetInnerHTML={{ __html: contentWithIds }}
-                />
+                {/* Article Content avec encart publicitaire au milieu */}
+                <ArticleContentWithAds html={contentWithIds} adSlot="4138966929" />
 
-                {/* Encart Publicitaire - Bien visible au milieu du contenu */}
-                <div className="my-16 flex justify-center">
+                {/* Encart Publicitaire - En fin d'article */}
+                <div className="my-8 flex justify-center">
                   <div className="w-full max-w-4xl border border-gray-200 rounded-lg p-4 bg-gray-50">
                     <AdSense adSlot="4138966929" />
                   </div>
