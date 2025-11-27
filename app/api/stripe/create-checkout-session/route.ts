@@ -34,6 +34,16 @@ export async function POST(request: NextRequest) {
     // Récupérer ou créer le customer Stripe
     let customerId: string
 
+    // Récupérer l'email de l'utilisateur d'abord
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
+    
+    if (userError || !user || !user.email) {
+      return NextResponse.json(
+        { error: 'Utilisateur non trouvé' },
+        { status: 404 }
+      )
+    }
+
     // Vérifier si l'utilisateur a déjà un customer_id
     const { data: existingSubscription, error: subError } = await supabaseAdmin
       .from('subscriptions')
@@ -41,27 +51,45 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId)
       .single()
 
-    if (subError || !existingSubscription?.stripe_customer_id) {
-      // Récupérer l'email de l'utilisateur
-      const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
-      
-      if (userError || !user) {
-        return NextResponse.json(
-          { error: 'Utilisateur non trouvé' },
-          { status: 404 }
-        )
+    // Si on a un customer_id dans la base, vérifier s'il existe dans Stripe
+    if (!subError && existingSubscription?.stripe_customer_id) {
+      try {
+        // Vérifier si le customer existe dans Stripe
+        await stripe.customers.retrieve(existingSubscription.stripe_customer_id)
+        customerId = existingSubscription.stripe_customer_id
+      } catch (stripeError: any) {
+        // Si le customer n'existe pas (erreur 404 ou "No such customer")
+        if (stripeError.code === 'resource_missing' || stripeError.message?.includes('No such customer')) {
+          console.log(`Customer ${existingSubscription.stripe_customer_id} n'existe plus dans Stripe, création d'un nouveau`)
+          // Le customer n'existe plus, on va en créer un nouveau
+          const customer = await stripe.customers.create({
+            email: user.email,
+            metadata: {
+              userId: userId,
+            },
+          })
+          customerId = customer.id
+          
+          // Mettre à jour la base de données avec le nouveau customer_id
+          await supabaseAdmin
+            .from('subscriptions')
+            .update({ stripe_customer_id: customerId })
+            .eq('user_id', userId)
+        } else {
+          // Autre erreur Stripe, on la propage
+          throw stripeError
+        }
       }
-
-      // Créer un nouveau customer Stripe
+    } else {
+      // Pas de customer_id dans la base, en créer un nouveau
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: {
           userId: userId,
         },
       })
-
       customerId = customer.id
-
+      
       // Sauvegarder le customer_id dans la base de données
       await supabaseAdmin
         .from('subscriptions')
@@ -71,8 +99,6 @@ export async function POST(request: NextRequest) {
         }, {
           onConflict: 'user_id',
         })
-    } else {
-      customerId = existingSubscription.stripe_customer_id
     }
 
     // Créer la session de checkout

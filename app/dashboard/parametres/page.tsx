@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { updateUserMetadata, updatePassword, deleteAccount, signOut } from '@/lib/auth'
 import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiEye, HiEyeOff, HiTrash, HiClipboardList, HiCheckCircle, HiSparkles, HiHeart } from 'react-icons/hi'
@@ -13,7 +13,15 @@ import NotificationBell from '@/components/NotificationBell'
 export default function ParametresPage() {
   const { user, loading, refreshUser } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [userName, setUserName] = useState('')
+  
+  const isActive = (path: string) => {
+    if (!pathname) return false
+    if (pathname === path) return true
+    if (path === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(path + '/')
+  }
 
   // États pour les formulaires
   const [firstName, setFirstName] = useState('')
@@ -174,38 +182,63 @@ export default function ParametresPage() {
         <nav className="p-4 space-y-2">
           <Link
             href="/dashboard"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiViewGrid className="text-xl" />
             <span className="dashboard-text">Tableau de bord</span>
           </Link>
           <Link
             href="/dashboard/fiches"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/fiches')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/fiches') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiDocumentText className="text-xl" />
             <span className="dashboard-text">Mes fiches</span>
           </Link>
-              <Link
-                href="/dashboard/mise-en-avant"
-                className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
-              >
-                <HiSparkles className="text-xl" />
-                <span className="dashboard-text">Mise en avant</span>
-              </Link>
-              <Link
-                href="/dashboard/revendications"
-                className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
-              >
-                <HiClipboardList className="text-xl" />
-                <span className="dashboard-text">Mes revendications</span>
-              </Link>
+          <Link
+            href="/dashboard/mise-en-avant"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/mise-en-avant')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/mise-en-avant') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiSparkles className="text-xl" />
+            <span className="dashboard-text">Mise en avant</span>
+          </Link>
+          <Link
+            href="/dashboard/revendications"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/revendications')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/revendications') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiClipboardList className="text-xl" />
+            <span className="dashboard-text">Mes revendications</span>
+          </Link>
           <Link
             href="/dashboard/parametres"
-            className="flex items-center space-x-3 px-4 py-3 bg-dashboard-hover text-dashboard-primary rounded-lg font-semibold"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/parametres')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/parametres') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiCog className="text-xl" />
-            <span className="dashboard-text font-semibold">Paramètres</span>
+            <span className="dashboard-text">Paramètres</span>
           </Link>
         </nav>
 

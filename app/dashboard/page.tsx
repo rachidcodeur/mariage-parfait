@@ -424,14 +424,13 @@ export default function DashboardPage() {
                             <span className="text-white">Modifier</span>
                           </Link>
 
-                          {/* Bouton Mettre en avant */}
+                          {/* Bouton Booster */}
                           <Link
                             href="/dashboard/mise-en-avant"
                             className="bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-lg flex items-center justify-center gap-2 px-3 py-1.5 transition dashboard-text font-semibold text-xs sm:text-sm flex-1 sm:flex-initial"
                           >
                             <HiSparkles className="text-sm sm:text-base text-primary-700" />
-                            <span className="hidden sm:inline">Mettre en avant</span>
-                            <span className="sm:hidden">Boost</span>
+                            <span>Booster</span>
                           </Link>
                         </div>
                       </div>

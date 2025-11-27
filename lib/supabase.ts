@@ -81,8 +81,6 @@ export async function getArticles(category?: string, limit = 30, offset = 0, sea
   let query = supabase
     .from('articles')
     .select('*')
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
 
   if (category && category !== 'all') {
     // Convertir le slug de catégorie en ID
@@ -102,6 +100,12 @@ export async function getArticles(category?: string, limit = 30, offset = 0, sea
     query = query.or(`title.ilike.${searchTerm},excerpt.ilike.${searchTerm},content.ilike.${searchTerm}`)
   }
 
+  // Appliquer l'ordre par date (du plus récent au plus ancien) APRÈS tous les filtres
+  query = query.order('created_at', { ascending: false })
+  
+  // Appliquer la pagination APRÈS l'ordre
+  query = query.range(offset, offset + limit - 1)
+
   const { data, error } = await query
 
   if (error) {
@@ -109,10 +113,23 @@ export async function getArticles(category?: string, limit = 30, offset = 0, sea
     return []
   }
 
-  console.log(`[getArticles] Found ${data?.length || 0} articles for category: ${category || 'all'}`)
+  // Log pour vérifier le tri
   if (data && data.length > 0) {
-    console.log(`[getArticles] Sample article category_ids:`, data.slice(0, 3).map(a => ({ id: a.id, category_id: a.category_id })))
+    const dates = data.map(a => ({ id: a.id, created_at: a.created_at, title: a.title.substring(0, 30) }))
+    console.log(`[getArticles] Found ${data.length} articles for category: ${category || 'all'}`)
+    console.log(`[getArticles] First 3 articles dates:`, dates.slice(0, 3))
+    
+    // Tri côté client en dernier recours si le tri SQL ne fonctionne pas
+    // Trier par date décroissante (plus récent en premier)
+    const sorted = [...data].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime()
+      const dateB = new Date(b.created_at).getTime()
+      return dateB - dateA // Ordre décroissant
+    })
+    
+    return sorted as Article[]
   }
+  
   return data as Article[]
 }
 

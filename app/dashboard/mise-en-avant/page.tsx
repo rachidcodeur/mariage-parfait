@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { getSupabaseClient } from '@/lib/supabase-client'
@@ -27,6 +27,14 @@ export default function MiseEnAvantPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  
+  const isActive = (path: string) => {
+    if (!pathname) return false
+    if (pathname === path) return true
+    if (path === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(path + '/')
+  }
   const [userName, setUserName] = useState('')
   const [providers, setProviders] = useState<Provider[]>([])
   const [loadingProviders, setLoadingProviders] = useState(true)
@@ -36,6 +44,7 @@ export default function MiseEnAvantPage() {
   const [boostedCount, setBoostedCount] = useState(0)
   const [boostPlans, setBoostPlans] = useState<BoostPlan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
+  const [loadingSubscription, setLoadingSubscription] = useState(true)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [canceling, setCanceling] = useState(false)
   const [resuming, setResuming] = useState(false)
@@ -43,8 +52,12 @@ export default function MiseEnAvantPage() {
 
   // Définir fetchActivePlan avant le useEffect qui l'utilise
   const fetchActivePlan = useCallback(async () => {
-    if (!user) return
+    if (!user) {
+      setLoadingSubscription(false)
+      return
+    }
 
+    setLoadingSubscription(true)
     try {
       const response = await fetch('/api/stripe/get-boost-subscription', {
         method: 'POST',
@@ -86,6 +99,8 @@ export default function MiseEnAvantPage() {
     } catch (error) {
       console.error('Error fetching active plan:', error)
       setActivePlan(null)
+    } finally {
+      setLoadingSubscription(false)
     }
   }, [user])
 
@@ -123,9 +138,10 @@ export default function MiseEnAvantPage() {
     }
 
     if (user) {
+      // Vérifier l'abonnement en premier pour éviter d'afficher les plans brièvement
+      fetchActivePlan()
       fetchBoostPlans()
       fetchProviders()
-      fetchActivePlan()
       // Récupérer le nom de l'utilisateur
       const email = user.email || ''
       const firstName = user.user_metadata?.first_name || ''
@@ -414,7 +430,7 @@ export default function MiseEnAvantPage() {
     router.push('/espace-pro')
   }
 
-  if (authLoading || loadingProviders) {
+  if (authLoading || loadingProviders || loadingSubscription) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dashboard-bg-secondary">
         <p className="text-dashboard-text-secondary">Chargement...</p>
@@ -449,35 +465,60 @@ export default function MiseEnAvantPage() {
         <nav className="p-4 space-y-2">
           <Link
             href="/dashboard"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiViewGrid className="text-xl" />
             <span className="dashboard-text">Tableau de bord</span>
           </Link>
           <Link
             href="/dashboard/fiches"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/fiches')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/fiches') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiDocumentText className="text-xl" />
             <span className="dashboard-text">Mes fiches</span>
           </Link>
           <Link
             href="/dashboard/mise-en-avant"
-            className="flex items-center space-x-3 px-4 py-3 bg-dashboard-hover text-dashboard-primary rounded-lg font-semibold"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/mise-en-avant')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/mise-en-avant') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiSparkles className="text-xl" />
-            <span className="dashboard-text font-semibold">Mise en avant</span>
+            <span className="dashboard-text">Mise en avant</span>
           </Link>
           <Link
             href="/dashboard/revendications"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/revendications')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/revendications') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiCheckCircle className="text-xl" />
             <span className="dashboard-text">Mes revendications</span>
           </Link>
           <Link
             href="/dashboard/parametres"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/parametres')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/parametres') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiCog className="text-xl" />
             <span className="dashboard-text">Paramètres</span>
@@ -524,28 +565,32 @@ export default function MiseEnAvantPage() {
 
           {/* Plan actif */}
           {activePlan && subscription && (
-            <div className={`dashboard-card border border-dashboard-border mb-6 ${
+            <div className={`border border-dashboard-border mb-6 rounded-xl shadow-card p-5 ${
               subscription.cancel_at_period_end 
                 ? 'bg-yellow-50 border-yellow-200' 
-                : 'bg-green-50 border-green-200'
+                : '!bg-green-600 border-green-600'
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h2 className={`dashboard-h2 mb-2 ${
                     subscription.cancel_at_period_end 
                       ? 'text-yellow-700' 
-                      : 'text-green-700'
+                      : '!text-white'
                   }`}>
                     Plan actif
                   </h2>
                   <p className={`dashboard-text ${
                     subscription.cancel_at_period_end 
                       ? 'text-yellow-600' 
-                      : 'text-green-600'
+                      : '!text-white'
                   }`}>
                     {activePlan.name} - {activePlan.price}€/mois
                   </p>
-                  <p className="dashboard-text-secondary text-sm mt-1">
+                  <p className={`text-sm mt-1 ${
+                    subscription.cancel_at_period_end 
+                      ? 'dashboard-text-secondary' 
+                      : '!text-white opacity-90'
+                  }`}>
                     {boostedCount} / {activePlan.maxListings} fiches boostées
                   </p>
                   {subscription.cancel_at_period_end && subscription.current_period_end && (
@@ -571,15 +616,15 @@ export default function MiseEnAvantPage() {
                   {!subscription.cancel_at_period_end && (
                     <>
                       <div className="flex items-center gap-2">
-                        <HiCheckCircle className="text-green-600 text-2xl" />
-                        <span className="dashboard-text font-semibold text-green-700">Actif</span>
+                        <HiCheckCircle className="!text-white text-2xl" />
+                        <span className="dashboard-text font-semibold !text-white">Actif</span>
                       </div>
                       <button
                         onClick={() => setShowCancelConfirm(true)}
                         disabled={canceling}
-                        className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg dashboard-text font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-lg dashboard-text font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
-                        <HiXCircle className="text-lg" />
+                        <HiXCircle className="text-lg text-black" />
                         Annuler l'abonnement
                       </button>
                     </>
@@ -617,7 +662,8 @@ export default function MiseEnAvantPage() {
 
           {/* Plans disponibles */}
           {/* Afficher les plans si pas d'abonnement actif OU si l'abonnement est annulé */}
-          {(!activePlan || (subscription && subscription.cancel_at_period_end)) && !loadingPlans && (
+          {/* Ne pas afficher les plans tant que l'abonnement n'est pas vérifié */}
+          {!loadingSubscription && (!activePlan || (subscription && subscription.cancel_at_period_end)) && !loadingPlans && (
             <div className="dashboard-card border border-dashboard-border mb-6">
               <h2 className="dashboard-h2 mb-4">
                 {subscription && subscription.cancel_at_period_end 
@@ -747,7 +793,7 @@ export default function MiseEnAvantPage() {
                           ) : (
                             <>
                               <HiSparkles className="inline mr-1 !text-white" />
-                              <span className="!text-white">Mettre en avant</span>
+                              <span className="!text-white">Booster</span>
                             </>
                           )}
                         </button>

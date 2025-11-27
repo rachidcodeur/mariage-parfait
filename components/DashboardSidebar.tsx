@@ -54,8 +54,23 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
   }
 
   const getMenuItemClasses = (path: string) => {
-    // Tous les onglets ont un fond blanc, peu importe la page
-    return 'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-white text-dashboard-text-secondary'
+    const active = isActive(path)
+    if (active) {
+      // Fond rose clair pour l'onglet actif (#fce7f3 = primary-100)
+      return 'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors font-semibold'
+    }
+    return 'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-white text-dashboard-text-secondary hover:bg-dashboard-hover'
+  }
+  
+  const getMenuItemStyle = (path: string) => {
+    const active = isActive(path)
+    if (active) {
+      return {
+        backgroundColor: '#fce7f3', // primary-100
+        color: '#ca3b76', // dashboard-primary
+      }
+    }
+    return {}
   }
 
   return (
@@ -117,6 +132,7 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             href="/dashboard"
             onClick={closeMobileMenu}
             className={getMenuItemClasses('/dashboard')}
+            style={getMenuItemStyle('/dashboard')}
           >
             <HiViewGrid className="text-xl" />
             <span className="dashboard-text">Tableau de bord</span>
@@ -125,6 +141,7 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             href="/dashboard/fiches"
             onClick={closeMobileMenu}
             className={getMenuItemClasses('/dashboard/fiches')}
+            style={getMenuItemStyle('/dashboard/fiches')}
           >
             <HiDocumentText className="text-xl" />
             <span className="dashboard-text">Mes fiches</span>
@@ -133,6 +150,7 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             href="/dashboard/mise-en-avant"
             onClick={closeMobileMenu}
             className={getMenuItemClasses('/dashboard/mise-en-avant')}
+            style={getMenuItemStyle('/dashboard/mise-en-avant')}
           >
             <HiSparkles className="text-xl" />
             <span className="dashboard-text">Mise en avant</span>
@@ -141,6 +159,7 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             href="/dashboard/revendications"
             onClick={closeMobileMenu}
             className={getMenuItemClasses('/dashboard/revendications')}
+            style={getMenuItemStyle('/dashboard/revendications')}
           >
             <HiClipboardList className="text-xl" />
             <span className="dashboard-text">Mes revendications</span>
@@ -150,6 +169,7 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
               href="/dashboard/admin/claims"
               onClick={closeMobileMenu}
               className={getMenuItemClasses('/dashboard/admin/claims')}
+              style={getMenuItemStyle('/dashboard/admin/claims')}
             >
               <HiClipboardList className="text-xl" />
               <span className="dashboard-text">Gestion des revendications</span>
@@ -159,6 +179,7 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             href="/dashboard/parametres"
             onClick={closeMobileMenu}
             className={getMenuItemClasses('/dashboard/parametres')}
+            style={getMenuItemStyle('/dashboard/parametres')}
           >
             <HiCog className="text-xl" />
             <span className="dashboard-text">Paramètres</span>
