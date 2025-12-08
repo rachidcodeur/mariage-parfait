@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { regionsData } from '@/lib/regions'
 
 // URL de base du site (à configurer selon votre domaine de production)
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
@@ -111,6 +112,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: new Date(),
           changeFrequency: 'daily',
           priority: 0.8,
+        })
+      })
+
+      // Ajouter toutes les pages régionales de l'annuaire
+      Object.keys(regionsData).forEach((regionSlug) => {
+        sitemapEntries.push({
+          url: `${baseUrl}/annuaire/${regionSlug}`,
+          lastModified: new Date(),
+          changeFrequency: 'weekly',
+          priority: 0.8,
+        })
+
+        // Ajouter toutes les pages départementales pour chaque région
+        const region = regionsData[regionSlug]
+        region.departments.forEach((department) => {
+          sitemapEntries.push({
+            url: `${baseUrl}/annuaire/${regionSlug}/${department.code}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.7,
+          })
         })
       })
     } catch (error) {
