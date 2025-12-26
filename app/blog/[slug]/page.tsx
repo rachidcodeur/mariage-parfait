@@ -11,6 +11,10 @@ import { getArticleBySlug, getArticles } from '@/lib/supabase'
 import { categoryIdToSlug, categoryNames } from '@/lib/categories'
 import { HiCalendar, HiClock, HiUser, HiPencil, HiCollection, HiHeart, HiSparkles, HiCake, HiTrendingUp, HiDocumentText, HiCamera, HiShoppingBag, HiGlobeAlt } from 'react-icons/hi'
 
+// Forcer le rendu dynamique pour permettre l'indexation
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const categoryIconsMap: Record<string, any> = {
   beaute: HiPencil,
   budget: HiCollection,
