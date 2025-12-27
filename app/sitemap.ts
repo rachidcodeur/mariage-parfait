@@ -79,7 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       allArticles.forEach((article) => {
         sitemapEntries.push({
           url: `${baseUrl}/blog/${article.slug}`,
-          lastModified: article.updated_at ? new Date(article.updated_at) : new Date(article.created_at),
+          lastModified: new Date(article.created_at),
           changeFrequency: 'weekly',
           priority: 0.8,
         })
@@ -105,7 +105,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         
         const { data: providers, error: providersError } = await supabase
           .from('providers')
-          .select('slug, updated_at, created_at')
+          .select('slug, created_at')
           .not('slug', 'is', null)
           .order('created_at', { ascending: false })
           .range(providersPageOffset, providersPageOffset + providersPageLimit - 1)
@@ -144,7 +144,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           if (provider.slug) {
             sitemapEntries.push({
               url: `${baseUrl}/annuaire/prestataire/${provider.slug}`,
-              lastModified: provider.updated_at ? new Date(provider.updated_at) : new Date(provider.created_at),
+              lastModified: new Date(provider.created_at),
               changeFrequency: 'monthly',
               priority: 0.7,
             })
