@@ -45,19 +45,20 @@ https://votre-domaine.com/google64c29c5c0466c561.html
 ### 2. Vérifier le sitemap
 ```bash
 # Accédez à cette URL :
-https://votre-domaine.com/sitemap.xml
+https://mariage-parfait.net/sitemap.xml
 ```
 - Le sitemap doit s'afficher correctement
 - Vérifiez qu'il contient bien vos articles et prestataires
 - Vérifiez les logs dans la console pour voir combien d'articles/prestataires sont inclus
+- **Note** : Le sitemap peut prendre quelques secondes à se charger car il contient 4764 pages
 
-### 3. Tester la route de diagnostic
+### 3. Tester la route de diagnostic (optionnel)
 ```bash
-# Accédez à cette URL :
-https://votre-domaine.com/api/sitemap/test
+# Accédez à cette URL (nécessite un redéploiement en production) :
+https://mariage-parfait.net/api/sitemap/test
 ```
 - Cette route affiche les statistiques du sitemap
-- Vérifiez que les nombres d'articles et prestataires sont corrects
+- **Note** : Si vous obtenez une 404, c'est normal - cette route nécessite un redéploiement. Ce n'est pas essentiel pour le SEO.
 
 ### 4. Vérifier robots.txt
 ```bash

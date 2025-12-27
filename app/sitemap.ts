@@ -11,11 +11,15 @@ export const revalidate = 0
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  // Utiliser SERVICE_ROLE_KEY si disponible, sinon fallback vers ANON_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   
   const sitemapEntries: MetadataRoute.Sitemap = []
   
   console.log('[Sitemap] Starting sitemap generation...')
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn('[Sitemap] Using ANON_KEY instead of SERVICE_ROLE_KEY (may have RLS limitations)')
+  }
 
   // Pages statiques
   sitemapEntries.push(
@@ -52,7 +56,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   )
 
   // Si Supabase est configuré, récupérer les articles et les fiches
-  if (supabaseUrl && supabaseServiceKey) {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.warn('[Sitemap] Supabase not configured - only static pages will be included')
+    console.warn(`[Sitemap] SUPABASE_URL: ${supabaseUrl ? 'SET' : 'MISSING'}, SERVICE_KEY: ${supabaseServiceKey ? 'SET' : 'MISSING'}`)
+  } else {
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -61,18 +68,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
 
     try {
-      // Récupérer tous les articles publiés
-      const { data: articles, error: articlesError } = await supabase
-        .from('articles')
-        .select('slug, updated_at, created_at')
-        .not('slug', 'is', null) // Seulement les articles avec un slug
-        .order('created_at', { ascending: false })
+      // Récupérer tous les articles publiés (avec pagination si nécessaire)
+      let articlesPage = 0
+      const articlesPageSize = 1000
+      let allArticles: any[] = []
+      let hasMoreArticles = true
 
-      if (articlesError) {
-        console.error('[Sitemap] Error fetching articles:', articlesError)
-      } else if (articles) {
-        console.log(`[Sitemap] Found ${articles.length} articles to include`)
-        articles.forEach((article) => {
+      console.log('[Sitemap] Fetching articles from Supabase...')
+      while (hasMoreArticles) {
+        const { data: articles, error: articlesError } = await supabase
+          .from('articles')
+          .select('slug, updated_at, created_at')
+          .not('slug', 'is', null)
+          .order('created_at', { ascending: false })
+          .range(articlesPage * articlesPageSize, (articlesPage + 1) * articlesPageSize - 1)
+
+        if (articlesError) {
+          console.error('[Sitemap] Error fetching articles:', articlesError)
+          console.error('[Sitemap] Error details:', {
+            message: articlesError.message,
+            code: articlesError.code,
+            details: articlesError.details,
+            hint: articlesError.hint,
+          })
+          hasMoreArticles = false
+        } else if (articles && articles.length > 0) {
+          console.log(`[Sitemap] Fetched page ${articlesPage + 1}: ${articles.length} articles`)
+          allArticles = allArticles.concat(articles)
+          articlesPage++
+          hasMoreArticles = articles.length === articlesPageSize
+        } else {
+          console.log(`[Sitemap] No more articles (page ${articlesPage + 1} returned empty)`)
+          hasMoreArticles = false
+        }
+      }
+
+      if (allArticles.length > 0) {
+        console.log(`[Sitemap] Found ${allArticles.length} articles to include`)
+        allArticles.forEach((article) => {
           sitemapEntries.push({
             url: `${baseUrl}/blog/${article.slug}`,
             lastModified: article.updated_at ? new Date(article.updated_at) : new Date(article.created_at),
@@ -80,22 +113,49 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.8,
           })
         })
+      } else {
+        console.warn('[Sitemap] No articles found - this may indicate an issue with Supabase connection or RLS policies')
+        console.warn('[Sitemap] Check if articles exist in the database and if RLS policies allow public read access')
       }
 
-      // Récupérer toutes les fiches de prestataires
-      // Ne pas filtrer par status car la colonne peut ne pas exister ou avoir des valeurs différentes
-      // Inclure tous les prestataires qui ont un slug (donc publiés)
-      const { data: providers, error: providersError } = await supabase
-        .from('providers')
-        .select('slug, updated_at, created_at')
-        .not('slug', 'is', null) // Seulement les prestataires avec un slug (publiés)
-        .order('created_at', { ascending: false })
+      // Récupérer toutes les fiches de prestataires (avec pagination)
+      let providersPage = 0
+      const providersPageSize = 1000
+      let allProviders: any[] = []
+      let hasMoreProviders = true
 
-      if (providersError) {
-        console.error('[Sitemap] Error fetching providers:', providersError)
-      } else if (providers) {
-        console.log(`[Sitemap] Found ${providers.length} providers to include`)
-        providers.forEach((provider) => {
+      console.log('[Sitemap] Fetching providers from Supabase...')
+      while (hasMoreProviders) {
+        const { data: providers, error: providersError } = await supabase
+          .from('providers')
+          .select('slug, updated_at, created_at')
+          .not('slug', 'is', null)
+          .order('created_at', { ascending: false })
+          .range(providersPage * providersPageSize, (providersPage + 1) * providersPageSize - 1)
+
+        if (providersError) {
+          console.error('[Sitemap] Error fetching providers:', providersError)
+          console.error('[Sitemap] Error details:', {
+            message: providersError.message,
+            code: providersError.code,
+            details: providersError.details,
+            hint: providersError.hint,
+          })
+          hasMoreProviders = false
+        } else if (providers && providers.length > 0) {
+          console.log(`[Sitemap] Fetched page ${providersPage + 1}: ${providers.length} providers`)
+          allProviders = allProviders.concat(providers)
+          providersPage++
+          hasMoreProviders = providers.length === providersPageSize
+        } else {
+          console.log(`[Sitemap] No more providers (page ${providersPage + 1} returned empty)`)
+          hasMoreProviders = false
+        }
+      }
+
+      if (allProviders.length > 0) {
+        console.log(`[Sitemap] Found ${allProviders.length} providers to include`)
+        allProviders.forEach((provider) => {
           sitemapEntries.push({
             url: `${baseUrl}/annuaire/prestataire/${provider.slug}`,
             lastModified: provider.updated_at ? new Date(provider.updated_at) : new Date(provider.created_at),
@@ -103,6 +163,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.7,
           })
         })
+      } else {
+        console.warn('[Sitemap] No providers found - this may indicate an issue with Supabase connection or RLS policies')
+        console.warn('[Sitemap] Check if providers exist in the database and if RLS policies allow public read access')
       }
 
       // Récupérer les pages de catégories de blog
@@ -157,11 +220,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       } catch (error) {
         console.error('[Sitemap] Error adding regions/departments:', error)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Sitemap] Error generating sitemap:', error)
+      console.error('[Sitemap] Error details:', {
+        message: error?.message,
+        stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      })
     }
-  } else {
-    console.warn('[Sitemap] Supabase not configured - only static pages will be included')
   }
 
   console.log(`[Sitemap] Generated sitemap with ${sitemapEntries.length} entries`)
