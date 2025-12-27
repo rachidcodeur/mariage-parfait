@@ -1,7 +1,6 @@
 import { MetadataRoute } from 'next'
-import { createClient } from '@supabase/supabase-js'
 import { regionsData } from '@/lib/regions'
-import { supabase } from '@/lib/supabase'
+import { getArticles, supabase } from '@/lib/supabase'
 
 // URL de base du site (à configurer selon votre domaine de production)
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
@@ -57,72 +56,54 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   )
 
   // Récupérer les articles et prestataires depuis Supabase
-  // Utiliser le client Supabase de lib/supabase.ts qui fonctionne déjà
+  // Utiliser les fonctions existantes qui fonctionnent déjà
   try {
-    // Récupérer tous les articles publiés (avec pagination si nécessaire)
-    let articlesPage = 0
-    const articlesPageSize = 1000
+    // Récupérer tous les articles en utilisant la fonction getArticles qui fonctionne
+    console.log('[Sitemap] Fetching articles from Supabase using getArticles...')
     let allArticles: any[] = []
-    let hasMoreArticles = true
-
-    console.log('[Sitemap] Fetching articles from Supabase...')
-    while (hasMoreArticles) {
-      const { data: articles, error: articlesError } = await supabase
-        .from('articles')
-        .select('slug, updated_at, created_at')
-        .not('slug', 'is', null)
-        .order('created_at', { ascending: false })
-        .range(articlesPage * articlesPageSize, (articlesPage + 1) * articlesPageSize - 1)
-
-      if (articlesError) {
-        console.error('[Sitemap] Error fetching articles:', articlesError)
-        console.error('[Sitemap] Error details:', {
-          message: articlesError.message,
-          code: articlesError.code,
-          details: articlesError.details,
-          hint: articlesError.hint,
-        })
-        hasMoreArticles = false
-      } else if (articles && articles.length > 0) {
-        console.log(`[Sitemap] Fetched page ${articlesPage + 1}: ${articles.length} articles`)
-        allArticles = allArticles.concat(articles)
-        articlesPage++
-        hasMoreArticles = articles.length === articlesPageSize
-      } else {
-        console.log(`[Sitemap] No more articles (page ${articlesPage + 1} returned empty)`)
-        hasMoreArticles = false
+    let articlesOffset = 0
+    const articlesLimit = 1000
+    
+    while (true) {
+      const articles = await getArticles('all', articlesLimit, articlesOffset)
+      if (!articles || articles.length === 0) {
+        break
       }
+      console.log(`[Sitemap] Fetched ${articles.length} articles (offset: ${articlesOffset})`)
+      allArticles = allArticles.concat(articles)
+      if (articles.length < articlesLimit) {
+        break
+      }
+      articlesOffset += articlesLimit
     }
 
-      if (allArticles.length > 0) {
-        console.log(`[Sitemap] Found ${allArticles.length} articles to include`)
-        allArticles.forEach((article) => {
-          sitemapEntries.push({
-            url: `${baseUrl}/blog/${article.slug}`,
-            lastModified: article.updated_at ? new Date(article.updated_at) : new Date(article.created_at),
-            changeFrequency: 'weekly',
-            priority: 0.8,
-          })
+    if (allArticles.length > 0) {
+      console.log(`[Sitemap] Found ${allArticles.length} articles to include`)
+      allArticles.forEach((article) => {
+        sitemapEntries.push({
+          url: `${baseUrl}/blog/${article.slug}`,
+          lastModified: article.updated_at ? new Date(article.updated_at) : new Date(article.created_at),
+          changeFrequency: 'weekly',
+          priority: 0.8,
         })
-      } else {
-        console.warn('[Sitemap] No articles found - this may indicate an issue with Supabase connection or RLS policies')
-        console.warn('[Sitemap] Check if articles exist in the database and if RLS policies allow public read access')
-      }
+      })
+    } else {
+      console.warn('[Sitemap] No articles found')
+    }
 
-    // Récupérer toutes les fiches de prestataires (avec pagination)
-    let providersPage = 0
-    const providersPageSize = 1000
-    let allProviders: any[] = []
-    let hasMoreProviders = true
-
+    // Récupérer toutes les fiches de prestataires (avec pagination simplifiée)
     console.log('[Sitemap] Fetching providers from Supabase...')
-    while (hasMoreProviders) {
+    let allProviders: any[] = []
+    let providersOffset = 0
+    const providersLimit = 1000
+    
+    while (true) {
       const { data: providers, error: providersError } = await supabase
         .from('providers')
         .select('slug, updated_at, created_at')
         .not('slug', 'is', null)
         .order('created_at', { ascending: false })
-        .range(providersPage * providersPageSize, (providersPage + 1) * providersPageSize - 1)
+        .range(providersOffset, providersOffset + providersLimit - 1)
 
       if (providersError) {
         console.error('[Sitemap] Error fetching providers:', providersError)
@@ -132,32 +113,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           details: providersError.details,
           hint: providersError.hint,
         })
-        hasMoreProviders = false
+        break
       } else if (providers && providers.length > 0) {
-        console.log(`[Sitemap] Fetched page ${providersPage + 1}: ${providers.length} providers`)
+        console.log(`[Sitemap] Fetched ${providers.length} providers (offset: ${providersOffset})`)
         allProviders = allProviders.concat(providers)
-        providersPage++
-        hasMoreProviders = providers.length === providersPageSize
+        if (providers.length < providersLimit) {
+          break
+        }
+        providersOffset += providersLimit
       } else {
-        console.log(`[Sitemap] No more providers (page ${providersPage + 1} returned empty)`)
-        hasMoreProviders = false
+        console.log(`[Sitemap] No more providers (offset: ${providersOffset})`)
+        break
       }
     }
 
-      if (allProviders.length > 0) {
-        console.log(`[Sitemap] Found ${allProviders.length} providers to include`)
-        allProviders.forEach((provider) => {
-          sitemapEntries.push({
-            url: `${baseUrl}/annuaire/prestataire/${provider.slug}`,
-            lastModified: provider.updated_at ? new Date(provider.updated_at) : new Date(provider.created_at),
-            changeFrequency: 'monthly',
-            priority: 0.7,
-          })
+    if (allProviders.length > 0) {
+      console.log(`[Sitemap] Found ${allProviders.length} providers to include`)
+      allProviders.forEach((provider) => {
+        sitemapEntries.push({
+          url: `${baseUrl}/annuaire/prestataire/${provider.slug}`,
+          lastModified: provider.updated_at ? new Date(provider.updated_at) : new Date(provider.created_at),
+          changeFrequency: 'monthly',
+          priority: 0.7,
         })
-      } else {
-        console.warn('[Sitemap] No providers found - this may indicate an issue with Supabase connection or RLS policies')
-        console.warn('[Sitemap] Check if providers exist in the database and if RLS policies allow public read access')
-      }
+      })
+    } else {
+      console.warn('[Sitemap] No providers found')
+    }
 
       // Récupérer les pages de catégories de blog
       const categories = [
