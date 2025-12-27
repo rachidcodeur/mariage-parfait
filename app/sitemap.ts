@@ -10,16 +10,13 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  // Utiliser SERVICE_ROLE_KEY si disponible, sinon fallback vers ANON_KEY
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  
   const sitemapEntries: MetadataRoute.Sitemap = []
   
   console.log('[Sitemap] Starting sitemap generation...')
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.warn('[Sitemap] Using ANON_KEY instead of SERVICE_ROLE_KEY (may have RLS limitations)')
-  }
+  console.log('[Sitemap] Supabase URL configured:', !!process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('[Sitemap] Service role key configured:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+  console.log('[Sitemap] Anon key configured:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  console.log('[Sitemap] Using supabase client from lib/supabase.ts:', !!supabase)
 
   // Pages statiques
   sitemapEntries.push(
@@ -92,53 +89,79 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
 
     // Récupérer toutes les fiches de prestataires (avec pagination simplifiée)
-    console.log('[Sitemap] Fetching providers from Supabase...')
-    let allProviders: any[] = []
-    let providersOffset = 0
-    const providersLimit = 1000
-    
-    while (true) {
-      const { data: providers, error: providersError } = await supabase
-        .from('providers')
-        .select('slug, updated_at, created_at')
-        .not('slug', 'is', null)
-        .order('created_at', { ascending: false })
-        .range(providersOffset, providersOffset + providersLimit - 1)
+    // Isoler dans un try/catch séparé pour mieux diagnostiquer
+    try {
+      console.log('[Sitemap] Fetching providers from Supabase...')
+      console.log('[Sitemap] Supabase client exists:', !!supabase)
+      
+      let allProviders: any[] = []
+      let providersPageOffset = 0
+      const providersPageLimit = 1000
+      let providersPageCount = 0
+      const maxProvidersPages = 10 // Limite de sécurité pour éviter les boucles infinies
+      
+      while (providersPageCount < maxProvidersPages) {
+        console.log(`[Sitemap] Fetching providers page ${providersPageCount + 1} (offset: ${providersPageOffset})`)
+        
+        const { data: providers, error: providersError } = await supabase
+          .from('providers')
+          .select('slug, updated_at, created_at')
+          .not('slug', 'is', null)
+          .order('created_at', { ascending: false })
+          .range(providersPageOffset, providersPageOffset + providersPageLimit - 1)
 
-      if (providersError) {
-        console.error('[Sitemap] Error fetching providers:', providersError)
-        console.error('[Sitemap] Error details:', {
-          message: providersError.message,
-          code: providersError.code,
-          details: providersError.details,
-          hint: providersError.hint,
-        })
-        break
-      } else if (providers && providers.length > 0) {
-        console.log(`[Sitemap] Fetched ${providers.length} providers (offset: ${providersOffset})`)
-        allProviders = allProviders.concat(providers)
-        if (providers.length < providersLimit) {
+        if (providersError) {
+          console.error('[Sitemap] Error fetching providers:', providersError)
+          console.error('[Sitemap] Error details:', {
+            message: providersError.message,
+            code: providersError.code,
+            details: providersError.details,
+            hint: providersError.hint,
+          })
+          throw providersError // Lancer l'erreur pour qu'elle soit attrapée par le catch
+        }
+        
+        if (providers && providers.length > 0) {
+          console.log(`[Sitemap] Fetched ${providers.length} providers (offset: ${providersPageOffset})`)
+          allProviders = allProviders.concat(providers)
+          
+          if (providers.length < providersPageLimit) {
+            console.log(`[Sitemap] Last page of providers reached (got ${providers.length} < ${providersPageLimit})`)
+            break
+          }
+          
+          providersPageOffset += providersPageLimit
+          providersPageCount++
+        } else {
+          console.log(`[Sitemap] No providers returned (offset: ${providersPageOffset})`)
           break
         }
-        providersOffset += providersLimit
-      } else {
-        console.log(`[Sitemap] No more providers (offset: ${providersOffset})`)
-        break
       }
-    }
 
-    if (allProviders.length > 0) {
-      console.log(`[Sitemap] Found ${allProviders.length} providers to include`)
-      allProviders.forEach((provider) => {
-        sitemapEntries.push({
-          url: `${baseUrl}/annuaire/prestataire/${provider.slug}`,
-          lastModified: provider.updated_at ? new Date(provider.updated_at) : new Date(provider.created_at),
-          changeFrequency: 'monthly',
-          priority: 0.7,
+      if (allProviders.length > 0) {
+        console.log(`[Sitemap] Successfully fetched ${allProviders.length} providers to include in sitemap`)
+        allProviders.forEach((provider) => {
+          if (provider.slug) {
+            sitemapEntries.push({
+              url: `${baseUrl}/annuaire/prestataire/${provider.slug}`,
+              lastModified: provider.updated_at ? new Date(provider.updated_at) : new Date(provider.created_at),
+              changeFrequency: 'monthly',
+              priority: 0.7,
+            })
+          }
         })
+        console.log(`[Sitemap] Added ${allProviders.length} provider URLs to sitemap`)
+      } else {
+        console.warn('[Sitemap] No providers found - this may indicate an RLS issue or empty database')
+      }
+    } catch (providerError: any) {
+      console.error('[Sitemap] CRITICAL ERROR fetching providers:', providerError)
+      console.error('[Sitemap] Provider error details:', {
+        message: providerError?.message,
+        code: providerError?.code,
+        stack: providerError?.stack,
       })
-    } else {
-      console.warn('[Sitemap] No providers found')
+      // Ne pas bloquer le reste du sitemap, mais loguer l'erreur
     }
 
       // Récupérer les pages de catégories de blog
