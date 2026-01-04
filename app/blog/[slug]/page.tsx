@@ -283,6 +283,20 @@ export async function generateMetadata({ params }: PageProps) {
     description,
     keywords: article.keywords || 'mariage, organisation mariage, conseils mariage',
     authors: [{ name: 'Mariage Parfait' }],
+    icons: {
+      icon: [
+        {
+          url: `${baseUrl}/images/general/favicon.ico`,
+          sizes: 'any',
+        },
+        {
+          url: `${baseUrl}/images/general/favicon.svg`,
+          type: 'image/svg+xml',
+        },
+      ],
+      shortcut: `${baseUrl}/images/general/favicon.ico`,
+      apple: `${baseUrl}/images/general/favicon.svg`,
+    },
     openGraph: {
       title: article.title,
       description,

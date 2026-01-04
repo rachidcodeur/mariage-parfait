@@ -10,6 +10,20 @@ export const metadata: Metadata = {
   description: 'Trouvez rapidement les meilleurs prestataires de mariage partout en France. Photographes, traiteurs, salles de réception, fleuristes, DJ... Explorez notre annuaire par région et département.',
   keywords: 'annuaire prestataires mariage, prestataires mariage France, photographe mariage, traiteur mariage, salle réception mariage, fleuriste mariage, DJ mariage, organisation mariage',
   authors: [{ name: 'Mariage Parfait' }],
+  icons: {
+    icon: [
+      {
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/images/general/favicon.ico`,
+        sizes: 'any',
+      },
+      {
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/images/general/favicon.svg`,
+        type: 'image/svg+xml',
+      },
+    ],
+    shortcut: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/images/general/favicon.ico`,
+    apple: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'}/images/general/favicon.svg`,
+  },
   openGraph: {
     title: 'Annuaire des Prestataires de Mariage en France - Mariage Parfait',
     description: 'Trouvez rapidement les meilleurs prestataires de mariage partout en France. Photographes, traiteurs, salles de réception, fleuristes, DJ...',

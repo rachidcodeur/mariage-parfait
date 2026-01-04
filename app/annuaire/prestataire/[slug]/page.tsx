@@ -338,6 +338,20 @@ export async function generateMetadata({ params }: PageProps) {
     description,
     keywords: `${provider.name}, prestataire mariage${category ? `, ${category.name}` : ''}${fullAddress ? `, ${fullAddress}` : ''}, organisation mariage`,
     authors: [{ name: 'Mariage Parfait' }],
+    icons: {
+      icon: [
+        {
+          url: `${baseUrl}/images/general/favicon.ico`,
+          sizes: 'any',
+        },
+        {
+          url: `${baseUrl}/images/general/favicon.svg`,
+          type: 'image/svg+xml',
+        },
+      ],
+      shortcut: `${baseUrl}/images/general/favicon.ico`,
+      apple: `${baseUrl}/images/general/favicon.svg`,
+    },
     openGraph: {
       title: `${provider.name} - Prestataire Mariage`,
       description,

@@ -71,12 +71,22 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/images/general/favicon.svg',
+        url: `${baseUrl}/images/general/favicon.ico`,
+        sizes: 'any',
+      },
+      {
+        url: `${baseUrl}/images/general/favicon.svg`,
         type: 'image/svg+xml',
       },
     ],
-    shortcut: '/images/general/favicon.svg',
-    apple: '/images/general/favicon.svg',
+    shortcut: `${baseUrl}/images/general/favicon.ico`,
+    apple: [
+      {
+        url: `${baseUrl}/images/general/favicon.svg`,
+        sizes: '180x180',
+        type: 'image/svg+xml',
+      },
+    ],
   },
 }
 
