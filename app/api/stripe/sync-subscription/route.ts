@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
     // On va chercher dans les sessions récentes
     let maxListings: number | null = null
     // Par défaut, respecter le type demandé si présent, sinon partir sur "boost" comme avant
-    let subscriptionType: 'boost' | 'listing' = preferredType || 'boost'
+    let effectiveType: 'boost' | 'listing' = preferredType || 'boost'
     
     try {
       // Chercher d'abord dans les metadata de l'abonnement Stripe lui-même (plus fiable)
@@ -252,12 +252,12 @@ export async function POST(request: NextRequest) {
       }
       // Ne laisser les metadata définir le type que si aucun type préféré n'a été demandé
       if (!preferredType && latestSubscription.metadata?.type) {
-        subscriptionType = latestSubscription.metadata.type === 'boost' ? 'boost' : 'listing'
-        console.log('[Sync] subscription_type trouvé dans metadata de l\'abonnement:', subscriptionType)
+        effectiveType = latestSubscription.metadata.type === 'boost' ? 'boost' : 'listing'
+        console.log('[Sync] subscription_type trouvé dans metadata de l\'abonnement:', effectiveType)
       }
       
       // Si pas trouvé dans l'abonnement, chercher dans les sessions checkout
-      if (maxListings === null || (!preferredType && subscriptionType === 'boost')) {
+      if (maxListings === null || (!preferredType && effectiveType === 'boost')) {
         const sessions = await stripe.checkout.sessions.list({
           customer: customerId,
           limit: 20, // Augmenter la limite pour être sûr de trouver la session
@@ -279,9 +279,9 @@ export async function POST(request: NextRequest) {
               console.log('[Sync] maxListings trouvé dans metadata de la session:', maxListings)
             }
             // Ne laisser les metadata définir le type que si aucun type préféré n'a été demandé
-            if (!preferredType && session.metadata?.type && subscriptionType === 'boost') {
-              subscriptionType = session.metadata.type === 'boost' ? 'boost' : 'listing'
-              console.log('[Sync] subscription_type trouvé dans metadata de la session:', subscriptionType)
+            if (!preferredType && session.metadata?.type && effectiveType === 'boost') {
+              effectiveType = session.metadata.type === 'boost' ? 'boost' : 'listing'
+              console.log('[Sync] subscription_type trouvé dans metadata de la session:', effectiveType)
             }
             break
           }
@@ -304,7 +304,7 @@ export async function POST(request: NextRequest) {
       stripe_subscription_id: latestSubscription.id,
       stripe_price_id: priceId,
       status: latestSubscription.status,
-      subscription_type: subscriptionType, // Utiliser le type déterminé depuis les metadata
+      subscription_type: effectiveType, // Utiliser le type déterminé depuis les metadata
       current_period_start: new Date(latestSubscription.current_period_start * 1000).toISOString(),
       current_period_end: new Date(latestSubscription.current_period_end * 1000).toISOString(),
       cancel_at_period_end: latestSubscription.cancel_at_period_end || false,
@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
       stripe_customer_id: customerId,
       stripe_subscription_id: latestSubscription.id,
       status: latestSubscription.status,
-      subscription_type: subscriptionType,
+      subscription_type: effectiveType,
       max_boosted_listings: maxListings,
       current_period_end: subscriptionUpdateData.current_period_end,
     })
@@ -345,7 +345,7 @@ export async function POST(request: NextRequest) {
         .from('subscriptions')
         .select('id')
         .eq('user_id', userId)
-        .eq('subscription_type', subscriptionType)
+        .eq('subscription_type', effectiveType)
         .maybeSingle()
       
       if (checkError && checkError.code !== 'PGRST116') {
