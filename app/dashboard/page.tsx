@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import Toast from '@/components/Toast'
 import NotificationBell from '@/components/NotificationBell'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import { isSuperAdmin } from '@/lib/admin-utils'
 
 interface DashboardStats {
   totalProviders: number
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [providerToDelete, setProviderToDelete] = useState<{ id: number; name: string } | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
+  const [superAdmin, setSuperAdmin] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -46,6 +48,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user) {
+      isSuperAdmin(user).then(setSuperAdmin)
       fetchStats()
       fetchProviders()
       fetchCategories()
@@ -223,7 +226,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-dashboard-bg-secondary flex">
-      <DashboardSidebar userName={userName} userEmail={user.email || ''} activePath="/dashboard" />
+      <DashboardSidebar userName={userName} userEmail={user.email || ''} activePath="/dashboard" isSuperAdmin={superAdmin} />
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-[240px] w-full">

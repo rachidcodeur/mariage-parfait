@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { getSupabaseClient } from '@/lib/supabase-client'
-import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiArrowLeft, HiDocument, HiSearch, HiMail, HiPhone, HiLocationMarker, HiCheckCircle, HiClipboardList, HiXCircle, HiSparkles, HiHeart } from 'react-icons/hi'
+import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiArrowLeft, HiDocument, HiSearch, HiMail, HiPhone, HiLocationMarker, HiCheckCircle, HiClipboardList, HiXCircle, HiSparkles, HiHeart, HiCreditCard } from 'react-icons/hi'
 import Link from 'next/link'
 import Toast from '@/components/Toast'
 import { normalizeFrenchPhone } from '@/lib/phone-utils'
@@ -679,6 +679,18 @@ export default function NouvelleFichePage() {
           >
             <HiDocumentText className="text-xl" />
             <span className="dashboard-text">Mes fiches</span>
+          </Link>
+          <Link
+            href="/dashboard/abonnement"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/abonnement')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/abonnement') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiCreditCard className="text-xl" />
+            <span className="dashboard-text">Abonnement</span>
           </Link>
           <Link
             href="/dashboard/mise-en-avant"

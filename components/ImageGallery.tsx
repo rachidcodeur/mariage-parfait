@@ -8,65 +8,81 @@ interface ImageGalleryProps {
 }
 
 export default function ImageGallery({ images, alt }: ImageGalleryProps) {
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-
-  // Toujours prendre seulement les 2 premières images (image 1 et image 2)
-  const displayImages = images.slice(0, 2)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const displayImages = images.filter((img) => img && img.trim() !== '')
 
   if (displayImages.length === 0) {
     return null
   }
 
-  const mainImage = displayImages[selectedImageIndex]
-  
-  // L'autre image pour la miniature (si on a 2 images)
-  const thumbnailImage = displayImages.length > 1 
-    ? displayImages[selectedImageIndex === 0 ? 1 : 0]
-    : null
+  const selectedImage = displayImages[selectedIndex]
+
+  // Répartir les miniatures en 2 lignes (moitié / moitié)
+  const half = Math.ceil(displayImages.length / 2)
+  const row1 = displayImages.slice(0, half)
+  const row2 = displayImages.slice(half)
 
   return (
-    <div className="mb-8">
-      {/* Image principale */}
-      <div className="mb-4">
-        <img
-          src={mainImage}
-          alt={alt}
-          className="w-full h-96 object-cover rounded-lg"
-        />
-      </div>
-      
-      {/* Miniatures cliquables - toujours 2 cases avec image 1 et image 2, format carré, largeur réduite */}
-      {displayImages.length > 1 && thumbnailImage && (
-        <div className="flex justify-start gap-4">
-          <button
-            onClick={() => setSelectedImageIndex(0)}
-            className={`relative w-48 h-48 overflow-hidden rounded-lg group cursor-pointer flex-shrink-0 ${
-              selectedImageIndex === 0 ? 'ring-2 ring-primary-500' : ''
-            }`}
-          >
-            <img
-              src={displayImages[0]}
-              alt={`${alt} - Image 1`}
-              className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition" />
-          </button>
-          <button
-            onClick={() => setSelectedImageIndex(1)}
-            className={`relative w-48 h-48 overflow-hidden rounded-lg group cursor-pointer flex-shrink-0 ${
-              selectedImageIndex === 1 ? 'ring-2 ring-primary-500' : ''
-            }`}
-          >
-            <img
-              src={displayImages[1]}
-              alt={`${alt} - Image 2`}
-              className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition" />
-          </button>
+    <div className="mb-8 md:mb-[60px] grid grid-cols-1 md:grid-cols-[18%_85%] gap-4 md:gap-[35px]">
+      {/* Colonne 1 : sur mobile = 3 colonnes (33% chacune, 3e vide), sur desktop = 2 lignes à gauche */}
+      <div className="grid grid-cols-3 md:flex md:flex-col pt-1 gap-[20px] order-2 md:order-1">
+        <div className="flex flex-col items-start gap-5 min-w-0">
+          {row1.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setSelectedIndex(i)}
+              className={`relative w-[95%] md:w-[95%] aspect-square overflow-hidden rounded-lg transition ${
+                selectedIndex === i
+                  ? 'ring-2 ring-primary-500 ring-offset-2'
+                  : 'opacity-90 hover:opacity-100'
+              }`}
+            >
+              <img
+                src={src}
+                alt={`${alt} - ${i + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
         </div>
-      )}
+        <div className="flex flex-col items-start gap-5 min-w-0">
+          {row2.map((_, idx) => {
+            const i = half + idx
+            const src = displayImages[i]
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSelectedIndex(i)}
+                className={`relative w-[95%] md:w-[95%] aspect-square overflow-hidden rounded-lg transition ${
+                  selectedIndex === i
+                    ? 'ring-2 ring-primary-500 ring-offset-2'
+                    : 'opacity-90 hover:opacity-100'
+                }`}
+              >
+                <img
+                  src={src}
+                  alt={`${alt} - ${i + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            )
+          })}
+        </div>
+        <div className="md:contents" aria-hidden="true" />
+      </div>
+
+      {/* Colonne 2 : image agrandie au clic (ratio 4:3), en premier sur mobile */}
+      <div className="order-1 md:order-2 flex md:justify-center">
+        <div className="relative w-full md:w-[95%] aspect-[4/3] rounded-lg overflow-hidden bg-gray-100">
+          <img
+            src={selectedImage}
+            alt={selectedIndex === 0 ? alt : `${alt} - Image ${selectedIndex + 1}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
     </div>
   )
 }
-

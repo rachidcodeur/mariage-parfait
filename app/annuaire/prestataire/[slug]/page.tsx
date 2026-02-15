@@ -50,8 +50,8 @@ export default async function ProviderPage({ params }: PageProps) {
     }
   }
   
-  // Prendre seulement les 2 premières images
-  const allImages = galleryImages.filter(img => img && img.trim() !== '').slice(0, 2)
+  // Toutes les images de la galerie pour la section à deux colonnes
+  const allImages = galleryImages.filter(img => img && img.trim() !== '')
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mariage-parfait.net'
   const providerUrl = `${baseUrl}/annuaire/prestataire/${provider.slug}`
 
@@ -127,7 +127,7 @@ export default async function ProviderPage({ params }: PageProps) {
         {/* Main Content */}
         <section className="py-12 bg-white">
           <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-x-[78px]">
               {/* Left Column - Main Content */}
               <div className="lg:col-span-2">
                 {/* Title and Category */}
@@ -173,7 +173,17 @@ export default async function ProviderPage({ params }: PageProps) {
 
               {/* Right Sidebar */}
               <aside className="lg:col-span-1">
-                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm sticky top-[64px] space-y-8">
+                <div
+                  className="border p-6 sticky top-[64px] space-y-8"
+                  style={{
+                    backgroundColor: '#F7F7F7',
+                    borderRadius: '20px',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'rgba(0, 0, 0, 0.12)',
+                    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
+                  }}
+                >
                   {/* Prendre contact */}
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Prendre contact</h3>
@@ -192,10 +202,10 @@ export default async function ProviderPage({ params }: PageProps) {
                           href={provider.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full flex items-center justify-center space-x-2 bg-white border border-gray-300 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-50 transition font-semibold"
+                          className="w-full flex items-center justify-center space-x-2 bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600 transition font-semibold"
                         >
                           <HiGlobeAlt className="text-xl" />
-                          <span>Visiter le site web</span>
+                          <span>Voir le site</span>
                         </a>
                       )}
                     </div>
@@ -207,7 +217,7 @@ export default async function ProviderPage({ params }: PageProps) {
                     <div className="space-y-3 text-sm text-gray-700">
                       {provider.phone && (
                         <div className="flex items-start space-x-3">
-                          <HiPhone className="text-gray-400 mt-1 flex-shrink-0" />
+                          <HiPhone className="text-primary-500 mt-1 flex-shrink-0" style={{ fontSize: '1.5em' }} />
                           <a href={`tel:${provider.phone}`} className="hover:text-primary-500 transition">
                             {provider.phone}
                           </a>
@@ -215,7 +225,7 @@ export default async function ProviderPage({ params }: PageProps) {
                       )}
                       {provider.email && (
                         <div className="flex items-start space-x-3">
-                          <HiMail className="text-gray-400 mt-1 flex-shrink-0" />
+                          <HiMail className="text-primary-500 mt-1 flex-shrink-0" style={{ fontSize: '1.5em' }} />
                           <a href={`mailto:${provider.email}`} className="hover:text-primary-500 transition break-all">
                             {provider.email}
                           </a>
@@ -223,7 +233,7 @@ export default async function ProviderPage({ params }: PageProps) {
                       )}
                       {fullAddress && (
                         <div className="flex items-start space-x-3">
-                          <HiLocationMarker className="text-gray-400 mt-1 flex-shrink-0" />
+                          <HiLocationMarker className="text-primary-500 mt-1 flex-shrink-0" style={{ fontSize: '1.5em' }} />
                           <span>{fullAddress}</span>
                         </div>
                       )}
@@ -236,7 +246,7 @@ export default async function ProviderPage({ params }: PageProps) {
                             className="inline-flex items-center justify-center w-10 h-10 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition"
                             aria-label="Instagram"
                           >
-                            <FaInstagram className="text-xl" />
+                            <FaInstagram className="text-white" style={{ fontSize: '1.5em' }} />
                           </a>
                         </div>
                       )}

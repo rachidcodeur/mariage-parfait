@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiMenu, HiX, HiClipboardList, HiSparkles, HiHeart } from 'react-icons/hi'
+import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiMenu, HiX, HiClipboardList, HiSparkles, HiHeart, HiCreditCard, HiFilter, HiPencil } from 'react-icons/hi'
 import { signOut } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 
@@ -11,10 +11,11 @@ interface DashboardSidebarProps {
   userName: string
   userEmail: string
   activePath?: string
-  isAdmin?: boolean
+  /** Affiche le bloc Administration (revendications + modifier une fiche) pour les super admins */
+  isSuperAdmin?: boolean
 }
 
-export default function DashboardSidebar({ userName, userEmail, activePath, isAdmin = false }: DashboardSidebarProps) {
+export default function DashboardSidebar({ userName, userEmail, activePath, isSuperAdmin = false }: DashboardSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
@@ -147,6 +148,15 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             <span className="dashboard-text">Mes fiches</span>
           </Link>
           <Link
+            href="/dashboard/abonnement"
+            onClick={closeMobileMenu}
+            className={getMenuItemClasses('/dashboard/abonnement')}
+            style={getMenuItemStyle('/dashboard/abonnement')}
+          >
+            <HiCreditCard className="text-xl" />
+            <span className="dashboard-text">Abonnement</span>
+          </Link>
+          <Link
             href="/dashboard/mise-en-avant"
             onClick={closeMobileMenu}
             className={getMenuItemClasses('/dashboard/mise-en-avant')}
@@ -164,16 +174,28 @@ export default function DashboardSidebar({ userName, userEmail, activePath, isAd
             <HiClipboardList className="text-xl" />
             <span className="dashboard-text">Mes revendications</span>
           </Link>
-          {isAdmin && (
-            <Link
-              href="/dashboard/admin/claims"
-              onClick={closeMobileMenu}
-              className={getMenuItemClasses('/dashboard/admin/claims')}
-              style={getMenuItemStyle('/dashboard/admin/claims')}
-            >
-              <HiClipboardList className="text-xl" />
-              <span className="dashboard-text">Gestion des revendications</span>
-            </Link>
+          {isSuperAdmin && (
+            <div className="pt-4 border-t border-dashboard-border">
+              <p className="px-4 py-2 text-xs font-semibold text-dashboard-text-light uppercase">Administration</p>
+              <Link
+                href="/dashboard/admin/claims"
+                onClick={closeMobileMenu}
+                className={getMenuItemClasses('/dashboard/admin/claims')}
+                style={getMenuItemStyle('/dashboard/admin/claims')}
+              >
+                <HiFilter className="text-xl" />
+                <span className="dashboard-text">Gestion des revendications</span>
+              </Link>
+              <Link
+                href="/dashboard/admin/fiches"
+                onClick={closeMobileMenu}
+                className={getMenuItemClasses('/dashboard/admin/fiches')}
+                style={getMenuItemStyle('/dashboard/admin/fiches')}
+              >
+                <HiPencil className="text-xl" />
+                <span className="dashboard-text">Modifier</span>
+              </Link>
+            </div>
           )}
           <Link
             href="/dashboard/parametres"

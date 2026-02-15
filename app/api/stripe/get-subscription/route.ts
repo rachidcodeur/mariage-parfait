@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Récupérer l'abonnement principal (type = 'listing')
     const { data: subscription, error } = await supabaseAdmin
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
+      .eq('subscription_type', 'listing')
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned

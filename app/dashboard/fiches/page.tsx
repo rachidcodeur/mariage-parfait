@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import Toast from '@/components/Toast'
 import NotificationBell from '@/components/NotificationBell'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import { isSuperAdmin } from '@/lib/admin-utils'
 
 export default function MesFichesPage() {
   const { user, loading } = useAuth()
@@ -24,11 +25,11 @@ export default function MesFichesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [providerToDelete, setProviderToDelete] = useState<{ id: number; name: string } | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
-
-  // La vérification de l'authentification est maintenant dans le layout
+  const [superAdmin, setSuperAdmin] = useState(false)
 
   useEffect(() => {
     if (user) {
+      isSuperAdmin(user).then(setSuperAdmin)
       fetchProviders()
       fetchCategories()
       // Récupérer le nom de l'utilisateur depuis l'email ou les metadata
@@ -170,7 +171,7 @@ export default function MesFichesPage() {
 
   return (
     <div className="min-h-screen bg-dashboard-bg-secondary flex">
-      <DashboardSidebar userName={userName} userEmail={user.email || ''} activePath="/dashboard/fiches" />
+      <DashboardSidebar userName={userName} userEmail={user.email || ''} activePath="/dashboard/fiches" isSuperAdmin={superAdmin} />
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-[240px] w-full">

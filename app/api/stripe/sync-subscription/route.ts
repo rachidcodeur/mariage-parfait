@@ -11,7 +11,7 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json()
+    const { userId, subscriptionType } = await request.json()
 
     if (!userId) {
       return NextResponse.json(
@@ -26,6 +26,14 @@ export async function POST(request: NextRequest) {
         persistSession: false,
       },
     })
+
+    // Type d'abonnement à synchroniser si précisé ('listing' ou 'boost')
+    const preferredType: 'listing' | 'boost' | null =
+      subscriptionType === 'listing'
+        ? 'listing'
+        : subscriptionType === 'boost'
+        ? 'boost'
+        : null
 
     // Récupérer l'email de l'utilisateur
     const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
@@ -45,8 +53,17 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId)
       .order('subscription_type', { ascending: false }) // 'boost' avant 'listing'
 
-    // Récupérer le customer_id depuis n'importe quel abonnement existant
-    let customerId: string | null = existingSubscriptions?.[0]?.stripe_customer_id || null
+    // Récupérer le customer_id depuis un abonnement existant
+    let customerId: string | null = null
+    if (existingSubscriptions && existingSubscriptions.length > 0) {
+      // Si un type est demandé, privilégier ce type
+      const fromPreferred =
+        preferredType &&
+        existingSubscriptions.find((sub: any) => sub.subscription_type === preferredType)
+
+      const sourceSub = (fromPreferred || existingSubscriptions[0]) as any
+      customerId = sourceSub.stripe_customer_id || null
+    }
 
     // Si pas de customer_id dans Supabase, chercher dans Stripe par email
     if (!customerId) {
@@ -109,16 +126,53 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer tous les abonnements actifs du customer depuis Stripe
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'all', // Récupérer tous les statuts
-      limit: 10,
-    })
+    let subscriptions
+    try {
+      subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all', // Récupérer tous les statuts
+        limit: 10,
+      })
+    } catch (stripeError: any) {
+      // Cas fréquent : customer créé en mode test, mais clé live utilisée
+      if (stripeError?.code === 'resource_missing' || stripeError?.message?.includes('No such customer')) {
+        console.error('[Sync] Customer Stripe introuvable (probablement créé en mode test) :', customerId)
+
+        // Option safe : marquer les abonnements comme annulés côté Supabase pour ce user
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({
+            status: 'canceled',
+            stripe_subscription_id: null,
+          })
+          .eq('user_id', userId)
+
+        // On retourne un succès "soft" pour que le front n'affiche pas une erreur bloquante
+        return NextResponse.json(
+          {
+            success: true,
+            subscription: null,
+            message:
+              'Ancien customer Stripe introuvable (probablement en mode test). ' +
+              'Les abonnements ont été marqués comme annulés côté base. ' +
+              'Si besoin, demandez à l’utilisateur de se réabonner en mode production.',
+          },
+          { status: 200 },
+        )
+      }
+
+      console.error('[Sync] Erreur Stripe lors de la récupération des abonnements:', stripeError)
+      return NextResponse.json(
+        { error: 'Erreur Stripe lors de la récupération des abonnements: ' + stripeError.message },
+        { status: 500 },
+      )
+    }
 
     console.log(`[Sync] Trouvé ${subscriptions.data.length} abonnement(s) dans Stripe pour le customer ${customerId}`)
 
     if (subscriptions.data.length === 0) {
       // Pas d'abonnement dans Stripe, mettre à jour le statut dans Supabase
+      const typeToMarkCanceled: 'listing' | 'boost' = preferredType || 'boost'
       const { error: updateError } = await supabaseAdmin
         .from('subscriptions')
         .update({
@@ -126,7 +180,7 @@ export async function POST(request: NextRequest) {
           stripe_subscription_id: null,
         })
         .eq('user_id', userId)
-        .eq('subscription_type', 'boost')
+        .eq('subscription_type', typeToMarkCanceled)
 
       if (updateError) {
         console.error('Error updating subscription status:', updateError)
@@ -139,23 +193,47 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Filtrer les abonnements boost en cherchant dans les metadata des sessions checkout
-    // ou prendre le plus récent si on ne peut pas déterminer le type
-    let boostSubscription = subscriptions.data.find(sub => {
-      // Vérifier si l'abonnement a des metadata indiquant qu'il s'agit d'un boost
-      return sub.metadata?.type === 'boost' || sub.metadata?.maxListings
-    })
+    // Choisir l'abonnement Stripe à synchroniser en fonction du type souhaité
+    let latestSubscription = subscriptions.data[0]
 
-    // Si aucun abonnement boost trouvé, prendre le plus récent
-    // (car lors de la création, on devrait avoir mis les metadata)
-    if (!boostSubscription) {
-      console.log('[Sync] Aucun abonnement boost identifié, utilisation du plus récent')
-      boostSubscription = subscriptions.data[0]
+    if (preferredType === 'boost') {
+      // Chercher un abonnement marqué comme boost
+      const boostSub = subscriptions.data.find(sub => {
+        return sub.metadata?.type === 'boost' || sub.metadata?.maxListings
+      })
+
+      if (boostSub) {
+        console.log('[Sync] Abonnement boost trouvé:', boostSub.id)
+        latestSubscription = boostSub
+      } else {
+        console.log('[Sync] Aucun abonnement boost identifié, utilisation du plus récent')
+      }
+    } else if (preferredType === 'listing') {
+      // Chercher un abonnement qui ne ressemble pas à un boost
+      const listingSub = subscriptions.data.find(sub => {
+        const isBoost = sub.metadata?.type === 'boost' || sub.metadata?.maxListings
+        return !isBoost
+      })
+
+      if (listingSub) {
+        console.log('[Sync] Abonnement listing trouvé:', listingSub.id)
+        latestSubscription = listingSub
+      } else {
+        console.log('[Sync] Aucun abonnement listing identifié, utilisation du plus récent')
+      }
     } else {
-      console.log('[Sync] Abonnement boost trouvé:', boostSubscription.id)
-    }
+      // Comportement historique : préférer un boost si détectable
+      const boostSub = subscriptions.data.find(sub => {
+        return sub.metadata?.type === 'boost' || sub.metadata?.maxListings
+      })
 
-    const latestSubscription = boostSubscription
+      if (boostSub) {
+        console.log('[Sync] Abonnement boost trouvé:', boostSub.id)
+        latestSubscription = boostSub
+      } else {
+        console.log('[Sync] Aucun abonnement boost identifié, utilisation du plus récent')
+      }
+    }
 
     // Récupérer le price_id de l'abonnement
     const priceId = latestSubscription.items.data[0]?.price.id || null
@@ -163,7 +241,8 @@ export async function POST(request: NextRequest) {
     // Récupérer les metadata de la session checkout pour obtenir maxListings
     // On va chercher dans les sessions récentes
     let maxListings: number | null = null
-    let subscriptionType: 'boost' | 'listing' = 'boost' // Par défaut boost
+    // Par défaut, respecter le type demandé si présent, sinon partir sur "boost" comme avant
+    let subscriptionType: 'boost' | 'listing' = preferredType || 'boost'
     
     try {
       // Chercher d'abord dans les metadata de l'abonnement Stripe lui-même (plus fiable)
@@ -171,13 +250,14 @@ export async function POST(request: NextRequest) {
         maxListings = parseInt(latestSubscription.metadata.maxListings, 10)
         console.log('[Sync] maxListings trouvé dans metadata de l\'abonnement:', maxListings)
       }
-      if (latestSubscription.metadata?.type) {
+      // Ne laisser les metadata définir le type que si aucun type préféré n'a été demandé
+      if (!preferredType && latestSubscription.metadata?.type) {
         subscriptionType = latestSubscription.metadata.type === 'boost' ? 'boost' : 'listing'
         console.log('[Sync] subscription_type trouvé dans metadata de l\'abonnement:', subscriptionType)
       }
       
       // Si pas trouvé dans l'abonnement, chercher dans les sessions checkout
-      if (maxListings === null || subscriptionType === 'boost') {
+      if (maxListings === null || (!preferredType && subscriptionType === 'boost')) {
         const sessions = await stripe.checkout.sessions.list({
           customer: customerId,
           limit: 20, // Augmenter la limite pour être sûr de trouver la session
@@ -198,7 +278,8 @@ export async function POST(request: NextRequest) {
               maxListings = parseInt(session.metadata.maxListings, 10)
               console.log('[Sync] maxListings trouvé dans metadata de la session:', maxListings)
             }
-            if (session.metadata?.type && subscriptionType === 'boost') {
+            // Ne laisser les metadata définir le type que si aucun type préféré n'a été demandé
+            if (!preferredType && session.metadata?.type && subscriptionType === 'boost') {
               subscriptionType = session.metadata.type === 'boost' ? 'boost' : 'listing'
               console.log('[Sync] subscription_type trouvé dans metadata de la session:', subscriptionType)
             }

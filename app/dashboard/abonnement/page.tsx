@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { getSupabaseClient } from '@/lib/supabase-client'
-import { HiCheckCircle, HiXCircle, HiClock, HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiArrowLeft, HiRefresh, HiHeart } from 'react-icons/hi'
+import { HiCheckCircle, HiXCircle, HiClock, HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiArrowLeft, HiRefresh, HiHeart, HiSparkles, HiClipboardList, HiCreditCard } from 'react-icons/hi'
 import Link from 'next/link'
 import Toast from '@/components/Toast'
 import { signOut } from '@/lib/auth'
@@ -16,11 +16,19 @@ export default function AbonnementPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
   const [userName, setUserName] = useState('')
+
+  const isActive = (path: string) => {
+    if (!pathname) return false
+    if (pathname === path) return true
+    if (path === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(path + '/')
+  }
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -107,7 +115,8 @@ export default function AbonnementPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
+        // Synchroniser explicitement l'abonnement principal "listing"
+        body: JSON.stringify({ userId: user.id, subscriptionType: 'listing' }),
       })
 
       const result = await response.json()
@@ -183,7 +192,8 @@ export default function AbonnementPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
+        // Ici on annule l'abonnement principal "listing"
+        body: JSON.stringify({ userId: user.id, subscriptionType: 'listing' }),
       })
 
       const result = await response.json()
@@ -214,7 +224,8 @@ export default function AbonnementPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
+        // Ici on reprend l'abonnement principal "listing"
+        body: JSON.stringify({ userId: user.id, subscriptionType: 'listing' }),
       })
 
       const result = await response.json()
@@ -250,9 +261,14 @@ export default function AbonnementPage() {
     })
   }
 
-  const isActive = subscription && 
+  // Statut booléen de l'abonnement (à ne pas confondre avec la fonction isActive() pour la sidebar)
+  // On exige aussi un stripe_subscription_id et une vraie date de fin pour éviter les "abonnements fantômes"
+  const hasActiveSubscription =
+    subscription &&
     subscription.status === 'active' &&
-    (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date()) &&
+    !!subscription.stripe_subscription_id &&
+    !!subscription.current_period_end &&
+    new Date(subscription.current_period_end) > new Date() &&
     !subscription.cancel_at_period_end
 
   if (authLoading || loading) {
@@ -286,17 +302,63 @@ export default function AbonnementPage() {
         <nav className="p-4 space-y-2">
           <Link
             href="/dashboard"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiViewGrid className="text-xl" />
             <span className="dashboard-text">Tableau de bord</span>
           </Link>
           <Link
             href="/dashboard/fiches"
-            className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/fiches')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/fiches') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
           >
             <HiDocumentText className="text-xl" />
             <span className="dashboard-text">Mes fiches</span>
+          </Link>
+          <Link
+            href="/dashboard/abonnement"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/abonnement')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/abonnement') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiCreditCard className="text-xl" />
+            <span className="dashboard-text">Abonnement</span>
+          </Link>
+          <Link
+            href="/dashboard/mise-en-avant"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/mise-en-avant')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/mise-en-avant') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiSparkles className="text-xl" />
+            <span className="dashboard-text">Mise en avant</span>
+          </Link>
+          <Link
+            href="/dashboard/revendications"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/revendications')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/revendications') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiClipboardList className="text-xl" />
+            <span className="dashboard-text">Mes revendications</span>
           </Link>
           <Link
             href="/dashboard/parametres"
@@ -379,7 +441,7 @@ export default function AbonnementPage() {
             </div>
 
             {/* Statut de l'abonnement */}
-            {isActive ? (
+            {hasActiveSubscription ? (
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 text-green-600">
                   <HiCheckCircle className="text-2xl" />

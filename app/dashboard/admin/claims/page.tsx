@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { isSuperAdmin } from '@/lib/admin-utils'
-import { HiArrowLeft, HiCheckCircle, HiXCircle, HiMail, HiPhone, HiClock, HiFilter, HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiHeart } from 'react-icons/hi'
+import { HiArrowLeft, HiCheckCircle, HiXCircle, HiMail, HiPhone, HiClock, HiFilter, HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiHeart, HiPencil } from 'react-icons/hi'
 import Link from 'next/link'
 import Toast from '@/components/Toast'
 import { signOut } from '@/lib/auth'
@@ -469,6 +469,13 @@ export default function AdminClaimsPage() {
             >
               <HiFilter className="text-xl" />
               <span className="dashboard-text font-semibold">Gestion des revendications</span>
+            </Link>
+            <Link
+              href="/dashboard/admin/fiches"
+              className="flex items-center space-x-3 px-4 py-3 text-dashboard-text-secondary hover:bg-dashboard-hover rounded-lg transition"
+            >
+              <HiPencil className="text-xl" />
+              <span className="dashboard-text">Modifier une fiche</span>
             </Link>
           </div>
           <Link

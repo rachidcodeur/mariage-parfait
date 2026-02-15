@@ -7,7 +7,7 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json()
+    const { userId, subscriptionType } = await request.json()
 
     if (!userId) {
       return NextResponse.json(
@@ -23,17 +23,28 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Récupérer l'abonnement boost (type = 'boost')
+    // Déterminer le type d'abonnement à annuler
+    // - 'listing' : abonnement principal pour créer/publier des fiches
+    // - 'boost'   : abonnement de mise en avant
+    const typeToCancel: 'listing' | 'boost' =
+      subscriptionType === 'listing' ? 'listing' : 'boost'
+
+    // Récupérer l'abonnement du type demandé
     const { data: subscription, error: subError } = await supabaseAdmin
       .from('subscriptions')
       .select('stripe_subscription_id, subscription_type')
       .eq('user_id', userId)
-      .eq('subscription_type', 'boost') // Filtrer par type boost
+      .eq('subscription_type', typeToCancel)
       .single()
 
     if (subError || !subscription?.stripe_subscription_id) {
       return NextResponse.json(
-        { error: 'Abonnement boost non trouvé' },
+        {
+          error:
+            typeToCancel === 'listing'
+              ? 'Abonnement principal non trouvé'
+              : 'Abonnement boost non trouvé',
+        },
         { status: 404 }
       )
     }
@@ -50,7 +61,7 @@ export async function POST(request: NextRequest) {
         cancel_at_period_end: true,
       })
       .eq('user_id', userId)
-      .eq('subscription_type', 'boost')
+      .eq('subscription_type', typeToCancel)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

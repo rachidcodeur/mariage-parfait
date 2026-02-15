@@ -107,6 +107,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           .from('providers')
           .select('slug, created_at')
           .not('slug', 'is', null)
+          // N'inclure dans le sitemap que les fiches réellement publiées/actives
+          .in('status', ['active', 'published'])
           .order('created_at', { ascending: false })
           .range(providersPageOffset, providersPageOffset + providersPageLimit - 1)
 

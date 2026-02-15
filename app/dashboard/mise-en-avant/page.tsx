@@ -5,7 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { signOut } from '@/lib/auth'
 import { getSupabaseClient } from '@/lib/supabase-client'
-import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiArrowLeft, HiStar, HiCheckCircle, HiXCircle, HiSparkles, HiHeart } from 'react-icons/hi'
+import { HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiArrowLeft, HiStar, HiCheckCircle, HiXCircle, HiSparkles, HiHeart, HiCreditCard } from 'react-icons/hi'
 import Link from 'next/link'
 import Toast from '@/components/Toast'
 import NotificationBell from '@/components/NotificationBell'
@@ -114,7 +114,8 @@ export default function MiseEnAvantPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
+        // Synchroniser explicitement l'abonnement de type "boost"
+        body: JSON.stringify({ userId: user.id, subscriptionType: 'boost' }),
       })
 
       const result = await response.json()
@@ -367,7 +368,8 @@ export default function MiseEnAvantPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
+        // Ici on annule l'abonnement de type "boost"
+        body: JSON.stringify({ userId: user.id, subscriptionType: 'boost' }),
       })
 
       const result = await response.json()
@@ -402,7 +404,8 @@ export default function MiseEnAvantPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: user.id }),
+        // Ici on reprend l'abonnement de type "boost"
+        body: JSON.stringify({ userId: user.id, subscriptionType: 'boost' }),
       })
 
       const result = await response.json()
@@ -486,6 +489,18 @@ export default function MiseEnAvantPage() {
           >
             <HiDocumentText className="text-xl" />
             <span className="dashboard-text">Mes fiches</span>
+          </Link>
+          <Link
+            href="/dashboard/abonnement"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
+              isActive('/dashboard/abonnement')
+                ? 'font-semibold'
+                : 'text-dashboard-text-secondary hover:bg-dashboard-hover'
+            }`}
+            style={isActive('/dashboard/abonnement') ? { backgroundColor: '#fce7f3', color: '#ca3b76' } : {}}
+          >
+            <HiCreditCard className="text-xl" />
+            <span className="dashboard-text">Abonnement</span>
           </Link>
           <Link
             href="/dashboard/mise-en-avant"
