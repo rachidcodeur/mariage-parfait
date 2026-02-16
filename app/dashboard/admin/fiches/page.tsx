@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { isSuperAdmin } from '@/lib/admin-utils'
-import { HiArrowLeft, HiSearch, HiMail, HiPhone, HiPencil, HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiHeart, HiFilter } from 'react-icons/hi'
+import { HiArrowLeft, HiSearch, HiMail, HiPhone, HiPencil, HiHome, HiViewGrid, HiDocumentText, HiCog, HiLogout, HiHeart, HiFilter, HiTrash } from 'react-icons/hi'
 import Link from 'next/link'
 import Toast from '@/components/Toast'
 import { signOut } from '@/lib/auth'
@@ -32,6 +32,7 @@ export default function AdminFichesPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userName, setUserName] = useState('')
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
 
   useEffect(() => {
     const check = async () => {
@@ -109,6 +110,42 @@ export default function AdminFichesPage() {
   const handleLogout = async () => {
     await signOut()
     router.push('/espace-pro')
+  }
+
+  const handleDelete = async (p: ProviderSearchResult) => {
+    if (!confirm(`Supprimer définitivement la fiche « ${p.name} » ? Cette action est irréversible.`)) {
+      return
+    }
+    setDeletingSlug(p.slug)
+    try {
+      const supabase = getSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setToast({ message: 'Session expirée. Reconnectez-vous.', type: 'error' })
+        setDeletingSlug(null)
+        return
+      }
+      const response = await fetch('/api/admin/delete-provider', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ slug: p.slug }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        setToast({ message: result.error || 'Erreur lors de la suppression.', type: 'error' })
+        setDeletingSlug(null)
+        return
+      }
+      setProviders((prev) => prev.filter((x) => x.slug !== p.slug))
+      setToast({ message: 'Fiche supprimée.', type: 'success' })
+    } catch (err: any) {
+      setToast({ message: err?.message || 'Erreur lors de la suppression.', type: 'error' })
+    } finally {
+      setDeletingSlug(null)
+    }
   }
 
   if (authLoading || !isAdmin) {
@@ -235,13 +272,24 @@ export default function AdminFichesPage() {
                         <td className="py-3 px-2 dashboard-text text-dashboard-text-secondary">{p.phone || '—'}</td>
                         <td className="py-3 px-2 dashboard-text text-dashboard-text-secondary">{p.city || '—'}</td>
                         <td className="py-3 px-2 text-right">
-                          <Link
-                            href={`/dashboard/admin/fiches/${encodeURIComponent(p.slug)}`}
-                            className="inline-flex items-center gap-2 dashboard-btn-primary text-sm py-2 px-4"
-                          >
-                            <HiPencil className="text-base" />
-                            Modifier
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/dashboard/admin/fiches/${encodeURIComponent(p.slug)}`}
+                              className="inline-flex items-center gap-2 dashboard-btn-primary text-sm py-2 px-4"
+                            >
+                              <HiPencil className="text-base" />
+                              Modifier
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(p)}
+                              disabled={deletingSlug === p.slug}
+                              className="inline-flex items-center gap-2 border border-dashboard-alert text-dashboard-alert hover:bg-dashboard-alert/10 rounded-lg text-sm py-2 px-4 transition disabled:opacity-50"
+                            >
+                              <HiTrash className="text-base" />
+                              {deletingSlug === p.slug ? 'Suppression...' : 'Supprimer'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

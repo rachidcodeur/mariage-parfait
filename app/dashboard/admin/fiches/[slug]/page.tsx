@@ -31,6 +31,7 @@ export default function AdminEditFichePage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -173,6 +174,15 @@ export default function AdminEditFichePage() {
 
   const removeFile = (index: number) => { setSelectedFiles(prev => prev.filter((_, i) => i !== index)) }
   const removeExistingImage = (index: number) => { setExistingImages(prev => prev.filter((_, i) => i !== index)) }
+
+  const swapExistingImages = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+    setExistingImages(prev => {
+      const arr = [...prev]
+      ;[arr[fromIndex], arr[toIndex]] = [arr[toIndex], arr[fromIndex]]
+      return arr
+    })
+  }
 
   const uploadImages = async (files: File[]): Promise<string[]> => {
     if (files.length === 0) return []
@@ -434,11 +444,39 @@ export default function AdminEditFichePage() {
               {existingImages.length > 0 && (
                 <div className="mb-4">
                   <h3 className="dashboard-h3 mb-2">Images actuelles</h3>
+                  <p className="dashboard-text text-dashboard-text-secondary text-sm mb-3">Glissez une image sur une autre pour inverser leur ordre.</p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {existingImages.map((url, i) => (
-                      <div key={i} className="relative">
-                        <img src={url} alt={`Image ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-dashboard-border" />
-                        <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                      <div
+                        key={i}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', String(i))
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.currentTarget.classList.add('opacity-60')
+                        }}
+                        onDragEnd={(e) => {
+                          e.currentTarget.classList.remove('opacity-60')
+                          setDragOverIndex(null)
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          e.dataTransfer.dropEffect = 'move'
+                          setDragOverIndex(i)
+                        }}
+                        onDragLeave={() => setDragOverIndex(null)}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          setDragOverIndex(null)
+                          const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
+                          if (!Number.isNaN(fromIndex) && fromIndex !== i) swapExistingImages(fromIndex, i)
+                        }}
+                        className={`relative cursor-grab active:cursor-grabbing rounded-lg transition-all ${
+                          dragOverIndex === i ? 'ring-2 ring-dashboard-primary ring-offset-2 scale-[1.02]' : ''
+                        }`}
+                      >
+                        <img src={url} alt={`Image ${i + 1}`} className="w-full h-32 object-cover rounded-lg border border-dashboard-border pointer-events-none" />
+                        <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10">
                           <HiX className="text-sm" />
                         </button>
                       </div>
